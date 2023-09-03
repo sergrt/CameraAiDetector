@@ -46,8 +46,8 @@ ELSE()
 ENDIF()
 
 set(SOURCE
-  Client.cpp
   CodeprojectAiFacade.cpp
+  Core.cpp
   FrameReader.cpp
   Logger.cpp
   main.cpp
@@ -56,8 +56,8 @@ set(SOURCE
   VideoWriter.cpp)
 
 set(HEADER
-  Client.h
   CodeprojectAiFacade.h
+  Core.h
   FinalAction.h
   FrameReader.h
   Logger.h

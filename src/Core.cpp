@@ -1,4 +1,4 @@
-#include "Client.h"
+#include "Core.h"
 
 #include "Logger.h"
 
@@ -20,11 +20,9 @@ std::string generateFileName(const std::string& prefix) {
     return prefix + timestamp;
 }
 
-
-
 }  // namespace
 
-Client::Client(const Settings& settings)
+Core::Core(const Settings& settings)
     : settings_(settings),
       frame_reader_(settings_.source),
       bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users),
@@ -33,45 +31,45 @@ Client::Client(const Settings& settings)
     frame_reader_.open();
 }
 
-Client::~Client() {
+Core::~Core() {
     bot_.stop();
     stop();
 }
 
-void Client::postOnDemandPhoto(const cv::Mat& frame) {
+void Core::postOnDemandPhoto(const cv::Mat& frame) {
     const auto file_name = generateFileName("on_demand_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), frame);
     bot_.postOnDemandPhoto(file_name);
 }
 
-void Client::initVideoWriter() {
+void Core::initVideoWriter() {
     Logger(LL_INFO) << "Init video writer";
     const auto stream_properties = frame_reader_.getStreamProperties();
     const auto file_name = generateFileName("v_") + VideoWriter::getExtension();
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, file_name, stream_properties);
 }
 
-void Client::postAlarmImage(const cv::Mat& frame) {
+void Core::postAlarmImage(const cv::Mat& frame) {
     last_alarm_image_sent_ = std::chrono::steady_clock::now();
     const auto file_name = generateFileName("alarm_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), frame);
     bot_.postAlarmPhoto(file_name);
 } 
 
-void Client::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
+void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     // Draw boxes
     for (const auto& prediction : predictions) {
         cv::rectangle(frame, cv::Point(prediction["x_min"], prediction["y_min"]), cv::Point(prediction["x_max"], prediction["y_max"]), frame_color, frame_width);
     }
 }
 
-void Client::postPreview() {
+void Core::postPreview() {
     const auto file_name = generateFileName("preview_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
     bot_.postVideoPreview(file_name, "Video: " + TelegramBot::VideoCmdPrefix() + video_writer_->fileNameStripped());
 }
 
-void Client::threadFuncProcess() {
+void Core::threadFuncProcess() {
     const auto scaled_size = cv::Size(
         static_cast<int>(frame_reader_.getStreamProperties().width * settings_.img_scale_x),
         static_cast<int>(frame_reader_.getStreamProperties().height * settings_.img_scale_y));
@@ -163,7 +161,7 @@ void Client::threadFuncProcess() {
     }
 }
 
-void Client::threadFunc() {
+void Core::threadFunc() {
     while (!stop_) {
         cv::Mat frame;
         if (!frame_reader_.getFrame(frame)) {
@@ -213,21 +211,21 @@ void Client::threadFunc() {
     stop_.notify_all();
 }
 
-void Client::start() {
+void Core::start() {
     if (!stop_) {
-        Logger(LL_WARNING) << "Attempt start() on already running client";
+        Logger(LL_WARNING) << "Attempt start() on already running core";
         return;
     }
 
     stop_ = false;
     stop_.notify_all();
-    thread_ = std::jthread(&Client::threadFunc, this);
-    thread_processing_ = std::jthread(&Client::threadFuncProcess, this);
+    thread_ = std::jthread(&Core::threadFunc, this);
+    thread_processing_ = std::jthread(&Core::threadFuncProcess, this);
 }
 
-void Client::stop() {
+void Core::stop() {
     if (stop_) {
-        Logger(LL_WARNING) << "Attempt stop() on already stopped client";
+        Logger(LL_WARNING) << "Attempt stop() on already stopped core";
     }
     stop_ = true;
     cv_.notify_all();

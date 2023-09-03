@@ -1,4 +1,4 @@
-#include "Client.h"
+#include "Core.h"
 #include "FinalAction.h"
 #include "Logger.h"
 #include "Settings.h"
@@ -6,17 +6,9 @@
 #include <memory>
 
 LogLevel app_log_level = LL_INFO;
+std::ostream* app_log_stream = nullptr;
 
-std::ostream* app_log_stream;
-
-int main()
-{
-    // Log to file
-    //auto log_stream = std::ofstream("log.txt");
-    //app_log_stream = &log_stream;
-
-    //app_log_stream = &std::cout;
-
+int main() {
     std::cout << "Application start, enter \"q\" to quit" << std::endl;
 
     const Settings settings = loadSettings();
@@ -35,15 +27,15 @@ int main()
         }
     });
 
-    Client client(settings);
-    client.start();
+    Core core(settings);
+    core.start();
 
     std::string command;
     while (true) {
         std::cin >> command;
         if (command == "q") {
             std::cout << "Exiting..." << std::endl;
-            client.stop();
+            core.stop();
             break;
         }
     }

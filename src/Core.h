@@ -14,10 +14,10 @@
 #include <deque>
 #include <condition_variable>
 
-class Client final {
+class Core final {
 public:
-    Client(const Settings& settings);
-    ~Client();
+    Core(const Settings& settings);
+    ~Core();
     void start();
     void stop();
 
