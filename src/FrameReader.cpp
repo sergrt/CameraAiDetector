@@ -14,7 +14,7 @@ bool FrameReader::open() {
     if (!res)
         Logger(LL_ERROR) << "FrameReader::open(): failed to open source \"" + source_ + "\"";
     else
-        Logger(LL_INFO) << "FrameReader::open(): opened \"" + source_ + "\": " << res;
+        Logger(LL_INFO) << "FrameReader::open(): opened \"" + source_ + "\"";
 
     return res;
 }
@@ -25,15 +25,15 @@ bool FrameReader::reconnect() {
     const auto res = capture_->open(source_, cv::CAP_ANY);
 
     if (!res)
-        Logger(LL_ERROR) << "reconnect(): failed to reconnect to source \"" + source_ + "\"";
+        Logger(LL_ERROR) << "FrameReader::reconnect(): failed to reconnect to source \"" + source_ + "\"";
     else
-        Logger(LL_INFO) << "reconnect() for \"" + source_ + "\": " << res;
+        Logger(LL_INFO) << "FrameReader::reconnect(): success for \"" + source_ + "\"";
 
     return res;
 }
 
 bool FrameReader::getFrame(cv::Mat& frame) {
-    // TODO: capture_->isOpened() ?
+    // TODO: check capture_->isOpened() ? Consider performance - this function is called from tight loop
     const auto res = capture_->read(frame);
 
     if (!res)

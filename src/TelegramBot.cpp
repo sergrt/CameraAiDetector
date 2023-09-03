@@ -75,6 +75,7 @@ bool TelegramBot::isUserAllowed(uint64_t user_id) const {
 bool TelegramBot::waitingForPhoto() const {
     return !users_waiting_for_photo_.empty();
 }
+
 void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients) {
     std::lock_guard lock(photo_mutex_);
     const auto path = (storage_path_ / file_name);
@@ -83,6 +84,7 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
     }
     users_waiting_for_photo_.clear();
 }
+
 void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
     std::vector<uint64_t> recipients;
     {
@@ -95,12 +97,14 @@ void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
     }
     queue_cv_.notify_one();
 }
+
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
     const auto path = (storage_path_ / file_name);
     for (const auto& user : allowed_users_) {
         bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
     }
 }
+
 void TelegramBot::postAlarmPhoto(const std::string& file_name) {
     {
         std::lock_guard lock(queue_mutex_);
@@ -108,11 +112,13 @@ void TelegramBot::postAlarmPhoto(const std::string& file_name) {
     }
     queue_cv_.notify_one();
 }
+
 void TelegramBot::sendMessage(const std::string& message) {
     for (const auto& user : allowed_users_) {
-        bot_->getApi().sendMessage(user, message);  // TODO: without notification
+        bot_->getApi().sendMessage(user, message);
     }
 }
+
 void TelegramBot::postMessage(const std::string& message) {
     {
         std::lock_guard lock(queue_mutex_);
@@ -120,12 +126,14 @@ void TelegramBot::postMessage(const std::string& message) {
     }
     queue_cv_.notify_one();
 }
+
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
     const auto path = (storage_path_ / file_name);
     for (const auto& user : allowed_users_) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);
+        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);  // NOTE: No notification here
     }
 }
+
 void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& message) {
     {
         std::lock_guard lock(queue_mutex_);
@@ -190,7 +198,7 @@ void TelegramBot::stop() {
     }
     stop_ = true;
     queue_cv_.notify_all();
-    /*
+    /* Uncomment this if std::thread is used instead of std::jthread
     if (thread_.joinable())
         thread_.join();
 

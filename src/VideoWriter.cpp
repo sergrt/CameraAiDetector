@@ -2,7 +2,6 @@
 
 #include "Logger.h"
 
-//#include <algorithm>
 #include <stdexcept>
 
 const auto fourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
@@ -29,7 +28,7 @@ VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const std::s
     }
     
     last_frame_time_ = std::chrono::steady_clock::now();
-    preview_frames_.reserve(120); // 2 minutes approx
+    preview_frames_.reserve(120);  // Some reasonable value to fit frames without reallocate too often
 }
 
 std::string VideoWriter::getExtension() {
@@ -42,7 +41,7 @@ void VideoWriter::write(const cv::Mat& frame) {
     if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= std::chrono::milliseconds(2000)) { // TODO: config
         last_frame_time_ = cur_time;
         preview_frames_.push_back(frame);
-        // TODO: check size
+        // TODO: check size to prevent mem issues
     }
 }
 
@@ -82,7 +81,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
     return resized_res;
 }
 
-std::string VideoWriter::fileNameStripped() const {
+std::string VideoWriter::getFileNameStripped() const {
     const auto file_name = std::filesystem::path(file_name_).filename().generic_string();
     return file_name.substr(0, file_name.size() - VideoWriter::getExtension().size());
 }

@@ -66,7 +66,7 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
 void Core::postPreview() {
     const auto file_name = generateFileName("preview_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
-    bot_.postVideoPreview(file_name, "Video: " + TelegramBot::VideoCmdPrefix() + video_writer_->fileNameStripped());
+    bot_.postVideoPreview(file_name, "Video: " + TelegramBot::VideoCmdPrefix() + video_writer_->getFileNameStripped());
 }
 
 void Core::threadFuncProcess() {
@@ -148,7 +148,7 @@ void Core::threadFuncProcess() {
                         Logger(LL_INFO) << "Write cooldown frame";
                         video_writer_->write(frame);
                         if (std::chrono::steady_clock::now() - *first_cooldown_frame_timestamp_ > std::chrono::milliseconds(settings_.cooldown_write_time_ms)) {
-                            Logger(LL_INFO) << "Finish writing file \"" << video_writer_->fileNameStripped() << "\"";
+                            Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
                             postPreview();
                             // Stop cooldown
                             video_writer_.reset();
@@ -229,8 +229,8 @@ void Core::stop() {
     }
     stop_ = true;
     cv_.notify_all();
-    //stop_.notify_all();
-    /*
+
+    /* Uncomment this if std::thread is used instead of std::jthread
     if (thread_.joinable())
         thread_.join();
     if (thread_processing_.joinable())

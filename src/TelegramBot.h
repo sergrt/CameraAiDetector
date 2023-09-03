@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 
+// TODO: Use visitor pattern with different item types to get rid of unused fields for certain items
 struct NotificationQueueItem {
     enum class Type {
         MESSAGE,
@@ -65,4 +66,3 @@ private:
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
 };
-

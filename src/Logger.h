@@ -3,6 +3,7 @@
 #include <syncstream>
 
 enum LogLevel {
+    // Prefixes because of names clash on Windows
     LL_TRACE,
     LL_INFO,
     LL_WARNING,
@@ -42,6 +43,7 @@ private:
     bool something_written_ = false;
 };
 
-inline Logger LogInfo() {
-    return Logger(LL_INFO);
-}
+// TODO : Consider shorcuts, like following:
+// inline Logger LogInfo() {
+//     return Logger(LL_INFO);
+// }

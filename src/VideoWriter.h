@@ -11,8 +11,9 @@
 class VideoWriter final {
 public:
     VideoWriter(const std::filesystem::path& storage_path, const std::string& file_name, const StreamProperties& stream_properties);
+
     void write(const cv::Mat& frame);
-    std::string fileNameStripped() const;
+    std::string getFileNameStripped() const;
     static std::string getExtension();
     cv::Mat getPreviewImage() const;
 

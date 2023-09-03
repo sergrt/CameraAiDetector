@@ -1,5 +1,6 @@
 #pragma once
 
+// This was taken from GSL Guidelines
 template <class F>
 class FinalAction {
 public:
