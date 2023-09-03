@@ -37,6 +37,8 @@ int main() {
             std::cout << "Exiting..." << std::endl;
             core.stop();
             break;
+        } else {
+            std::cout << "Enter \"q\" to quit" << std::endl;
         }
     }
 }

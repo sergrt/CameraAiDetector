@@ -11,6 +11,7 @@
 class FrameReader final {
 public:
     FrameReader(std::string source);
+
     bool getFrame(cv::Mat& frame);
     StreamProperties getStreamProperties() const;
     bool open();

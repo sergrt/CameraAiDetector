@@ -32,7 +32,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (entry.path().extension() == ext) {
                     const auto file_name = entry.path().filename().generic_string();
-                    files_list += VideoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "\n";
+                    files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "\n";
                 }
             }
 
@@ -41,15 +41,12 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
-            if (StringTools::startsWith(message->text, VideoCmdPrefix())) {
+            if (StringTools::startsWith(message->text, videoCmdPrefix())) {
                 Logger(LL_INFO) << "video command received: " << message->text;
-
-                const size_t cmd_len = VideoCmdPrefix().size();
-                const std::string file_name = message->text.substr(cmd_len) + VideoWriter::getExtension();
+                const std::string file_name = message->text.substr(videoCmdPrefix().size()) + VideoWriter::getExtension();
                 // TODO: sanitize file_name to have no malicious names
-                Logger(LL_INFO) << "Filename extracted: " << file_name;
                 const std::filesystem::path file_path = storage_path_ / file_name;
-                Logger(LL_INFO) << "Full path: " << file_path;
+                Logger(LL_INFO) << "Filename extracted: " << file_name << ", full path: " << file_path;
 
                 if (std::filesystem::exists(file_path)) {
                     bot_->getApi().sendVideo(id, TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4"), false, 0, 0, 0, "", file_path.filename().generic_string());
@@ -58,9 +55,8 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 }
             }
         } else {
-            Logger(LL_WARNING) << "User tried to access: " << id;
+            Logger(LL_WARNING) << "Unauthorized user tried to access: " << id;
         }
-
     });
 }
 
@@ -85,6 +81,26 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
     users_waiting_for_photo_.clear();
 }
 
+void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
+    const auto path = (storage_path_ / file_name);
+    for (const auto& user : allowed_users_) {
+        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
+    }
+}
+
+void TelegramBot::sendMessage(const std::string& message) {
+    for (const auto& user : allowed_users_) {
+        bot_->getApi().sendMessage(user, message);
+    }
+}
+
+void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
+    const auto path = (storage_path_ / file_name);
+    for (const auto& user : allowed_users_) {
+        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);  // NOTE: No notification here
+    }
+}
+
 void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
     std::vector<uint64_t> recipients;
     {
@@ -98,25 +114,12 @@ void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
-    const auto path = (storage_path_ / file_name);
-    for (const auto& user : allowed_users_) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
-    }
-}
-
 void TelegramBot::postAlarmPhoto(const std::string& file_name) {
     {
         std::lock_guard lock(queue_mutex_);
         notification_queue_.emplace_back(NotificationQueueItem::Type::ALARM_PHOTO, "", file_name);
     }
     queue_cv_.notify_one();
-}
-
-void TelegramBot::sendMessage(const std::string& message) {
-    for (const auto& user : allowed_users_) {
-        bot_->getApi().sendMessage(user, message);
-    }
 }
 
 void TelegramBot::postMessage(const std::string& message) {
@@ -127,13 +130,6 @@ void TelegramBot::postMessage(const std::string& message) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
-    const auto path = (storage_path_ / file_name);
-    for (const auto& user : allowed_users_) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);  // NOTE: No notification here
-    }
-}
-
 void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& message) {
     {
         std::lock_guard lock(queue_mutex_);
@@ -142,12 +138,12 @@ void TelegramBot::postVideoPreview(const std::string& file_name, const std::stri
     queue_cv_.notify_one();
 }
 
-std::string TelegramBot::VideoCmdPrefix() {
+std::string TelegramBot::videoCmdPrefix() {
     constexpr auto video_prefix = "/video_";
     return video_prefix;
 }
 
-void TelegramBot::threadFunc() {
+void TelegramBot::pollThreadFunc() {
     bot_->getApi().deleteWebhook();
     TgBot::TgLongPoll longPoll(*bot_.get());
 
@@ -187,8 +183,7 @@ void TelegramBot::start() {
     }
 
     stop_ = false;
-    //stop_.notify_all();
-    poll_thread_ = std::jthread(&TelegramBot::threadFunc, this);
+    poll_thread_ = std::jthread(&TelegramBot::pollThreadFunc, this);
     queue_thread_ = std::jthread(&TelegramBot::queueThreadFunc, this);
 }
 
@@ -198,9 +193,10 @@ void TelegramBot::stop() {
     }
     stop_ = true;
     queue_cv_.notify_all();
+
     /* Uncomment this if std::thread is used instead of std::jthread
-    if (thread_.joinable())
-        thread_.join();
+    if (poll_thread_.joinable())
+        poll_thread_.join();
 
     if (queue_thread_.joinable())
         queue_thread_.join();

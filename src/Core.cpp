@@ -49,8 +49,8 @@ void Core::initVideoWriter() {
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, file_name, stream_properties);
 }
 
-void Core::postAlarmImage(const cv::Mat& frame) {
-    last_alarm_image_sent_ = std::chrono::steady_clock::now();
+void Core::postAlarmPhoto(const cv::Mat& frame) {
+    last_alarm_photo_sent_ = std::chrono::steady_clock::now();
     const auto file_name = generateFileName("alarm_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), frame);
     bot_.postAlarmPhoto(file_name);
@@ -63,13 +63,13 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     }
 }
 
-void Core::postPreview() {
+void Core::postVideoPreview() {
     const auto file_name = generateFileName("preview_") + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
-    bot_.postVideoPreview(file_name, "Video: " + TelegramBot::VideoCmdPrefix() + video_writer_->getFileNameStripped());
+    bot_.postVideoPreview(file_name, "Video: " + TelegramBot::videoCmdPrefix() + video_writer_->getFileNameStripped());
 }
 
-void Core::threadFuncProcess() {
+void Core::processingThreadFunc() {
     const auto scaled_size = cv::Size(
         static_cast<int>(frame_reader_.getStreamProperties().width * settings_.img_scale_x),
         static_cast<int>(frame_reader_.getStreamProperties().height * settings_.img_scale_y));
@@ -80,7 +80,7 @@ void Core::threadFuncProcess() {
 
     while (!stop_) {
         std::unique_lock lock(buffer_mutex_);
-        cv_.wait(
+        buffer_cv_.wait(
             lock, [&] { return !buffer_.empty() || stop_; });
 
         if (stop_)
@@ -132,10 +132,10 @@ void Core::threadFuncProcess() {
                 video_writer_->write(frame);
 
                 // Check tg delay
-                if (std::chrono::steady_clock::now() - last_alarm_image_sent_ > std::chrono::milliseconds(settings_.telegram_notification_delay_ms)) {
+                if (std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.telegram_notification_delay_ms)) {
                     const cv::Mat& mat_box = (settings_.use_image_scale ? frame_scaled : frame);
                     drawBoxes(mat_box, detect_json["predictions"]);
-                    postAlarmImage(mat_box);
+                    postAlarmPhoto(mat_box);
                 }
 
             } else {  // Not detected
@@ -149,7 +149,7 @@ void Core::threadFuncProcess() {
                         video_writer_->write(frame);
                         if (std::chrono::steady_clock::now() - *first_cooldown_frame_timestamp_ > std::chrono::milliseconds(settings_.cooldown_write_time_ms)) {
                             Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
-                            postPreview();
+                            postVideoPreview();
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();
@@ -161,7 +161,7 @@ void Core::threadFuncProcess() {
     }
 }
 
-void Core::threadFunc() {
+void Core::captureThreadFunc() {
     while (!stop_) {
         cv::Mat frame;
         if (!frame_reader_.getFrame(frame)) {
@@ -184,7 +184,7 @@ void Core::threadFunc() {
                 buffer_.emplace_back(std::move(frame));
                 buffer_size = buffer_.size();
             }
-            cv_.notify_all();
+            buffer_cv_.notify_all();
 
             static uint64_t counter = 0;
             if (counter++ % 300 == 0)
@@ -219,8 +219,8 @@ void Core::start() {
 
     stop_ = false;
     stop_.notify_all();
-    thread_ = std::jthread(&Core::threadFunc, this);
-    thread_processing_ = std::jthread(&Core::threadFuncProcess, this);
+    capture_thread_ = std::jthread(&Core::captureThreadFunc, this);
+    processing_thread_ = std::jthread(&Core::processingThreadFunc, this);
 }
 
 void Core::stop() {
@@ -228,12 +228,12 @@ void Core::stop() {
         Logger(LL_WARNING) << "Attempt stop() on already stopped core";
     }
     stop_ = true;
-    cv_.notify_all();
+    buffer_cv_.notify_all();
 
     /* Uncomment this if std::thread is used instead of std::jthread
-    if (thread_.joinable())
-        thread_.join();
-    if (thread_processing_.joinable())
-        thread_processing_.join();
+    if (capture_thread_.joinable())
+        capture_thread_.join();
+    if (processing_thread_.joinable())
+        processing_thread_.join();
     */
 }

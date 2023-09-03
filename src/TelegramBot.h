@@ -32,6 +32,7 @@ public:
     void start();
     void stop();
 
+    // Post to sending queue
     void postOnDemandPhoto(const std::string& file_name);
     void postAlarmPhoto(const std::string& file_name);
     void postMessage(const std::string& message);
@@ -39,27 +40,29 @@ public:
     
     bool waitingForPhoto() const;
 
-    static std::string VideoCmdPrefix();
+    static std::string videoCmdPrefix();
 
 private:
+    // Actual sending
     void sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients);
     void sendAlarmPhoto(const std::string& file_name);
     void sendMessage(const std::string& message);
     void sendVideoPreview(const std::string& file_name, const std::string& message);
 
-    void threadFunc();
-    void queueThreadFunc();
     bool isUserAllowed(uint64_t user_id) const;
 
+    void pollThreadFunc();
+    void queueThreadFunc();
+
     std::unique_ptr<TgBot::Bot> bot_;
+    std::filesystem::path storage_path_;
+    std::vector<uint64_t> allowed_users_;
+
     std::jthread poll_thread_;
     std::atomic_bool stop_ = true;
 
     std::vector<uint64_t> users_waiting_for_photo_;
     std::mutex photo_mutex_;
-
-    std::vector<uint64_t> allowed_users_;
-    std::filesystem::path storage_path_;
 
     std::deque<NotificationQueueItem> notification_queue_;
     std::jthread queue_thread_;
