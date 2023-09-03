@@ -24,7 +24,6 @@ link_directories(${Boost_LIBRARY_DIR})
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
 link_directories(${CURL_LIBRARIES})
-message("[CURL] ${CURL_LIBRARIES}")
 
 include_directories("${THIRDPARTY_DIR}/json/include")
 
@@ -33,10 +32,9 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBS})
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
-find_package(OpenSSL 3.0.0 REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 include_directories(${OPENSSL_INCLUDE_DIR})
-message("[OPENSSL] ${OPENSSL_LIBRARIES}")
 
 set(TGBOT_ROOT_DIR "${THIRDPARTY_DIR}/tgbot-cpp")
 include_directories(${TGBOT_ROOT_DIR}/include)
