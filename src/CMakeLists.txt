@@ -69,10 +69,10 @@ set(HEADER
 add_executable(${PROJECT_NAME} ${SOURCE} ${HEADER})
 
 IF (WIN32)
-  IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    SET(CURL_LIB_NAME libcurl-d_imp)
-  ELSE()
+  IF (CMAKE_BUILD_TYPE STREQUAL "Release")
     SET(CURL_LIB_NAME libcurl_imp)
+  ELSE()
+    SET(CURL_LIB_NAME libcurl-d_imp)
   ENDIF()
 
   target_link_libraries(${PROJECT_NAME} TgBot ${CURL_LIB_NAME} OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS})
