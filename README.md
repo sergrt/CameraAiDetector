@@ -45,7 +45,7 @@ To tweak performance, try to use different frame scaling, and different image fo
 
 ## Compilation
 ### Linux
-Linux compilation is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make.
+Linux compilation is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's CMakeLists.txt, see Windows installation section.
 ### Window
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
 
