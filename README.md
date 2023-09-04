@@ -11,8 +11,12 @@ This application is based on CodeProject AI (https://www.codeproject.com/Article
 The application is written using C++, so it can be compiled on any supported platform.
 ### Features
 - Notify Telegram bot authorized users about objects on camera (alarm images)
+  
+  <img src="../media/person.jpg" alt="drawing" width="300"/>  <img src="../media/cars.jpg" alt="drawing" width="300"/>
 - Record videos based on detected object - useful to save space on device (only videos of interest are recorded)
 - Send image with video preview after the video has been recorded
+
+  <img src="../media/video_preview.jpg" alt="drawing" width="300"/>
 - Allow users to get instant shot from camera
 - List all recorded videos
 - Allow users to download particular video
