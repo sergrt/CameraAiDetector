@@ -22,7 +22,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     });
     bot_->getEvents().onCommand("ping", [&](TgBot::Message::Ptr message) { 
         if (const auto id = message->chat->id; isUserAllowed(id))
-            bot_->getApi().sendMessage(id, "127.0.0.1");
+            bot_->getApi().sendMessage(id, "ok");
     });
     bot_->getEvents().onCommand("list_videos", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {

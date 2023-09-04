@@ -38,7 +38,7 @@ int main() {
             core.stop();
             break;
         } else {
-            std::cout << "Enter \"q\" to quit" << std::endl;
+            std::cout << "Invalid command. Enter \"q\" to quit" << std::endl;
         }
     }
 }
