@@ -196,6 +196,7 @@ void Core::captureThreadFunc() {
                     //Logger(LL_WARNING) << "buffer size > 100";
                 }
                 if (buffer_size > 500) {
+                    // TODO: add strategy to settings.json - if video file is processed then it's better to wait a little here instead of dropping
                     if (!video_writer_) { // Do not drop cache while recording video - it might be processed later
                         Logger(LL_ERROR) << "buffer size > 500, dropping cache";
                         std::lock_guard lock(buffer_mutex_);
