@@ -12,7 +12,7 @@ The application is written using C++, so it can be compiled on any supported pla
 ### Features
 - Notify Telegram bot authorized users about objects on camera (alarm images)
   
-  <img src="../media/person.jpg" alt="drawing" width="300"/>  <img src="../media/cars.jpg" alt="drawing" width="300"/>
+  <img src="../media/person.jpg" alt="drawing" width="300"/> <img src="../media/cars.jpg" alt="drawing" width="300"/>
 - Record videos based on detected object - useful to save space on device (only videos of interest are recorded)
 - Send image with video preview after the video has been recorded
 
@@ -50,7 +50,7 @@ To tweak performance, try to use different frame scaling, and different image fo
 ## Compilation
 ### Linux
 Linux compilation is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's CMakeLists.txt, see Windows installation section.
-### Window
+### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
 
 #### Install CodeProject AI server
@@ -136,4 +136,4 @@ $ cmake ..
 # Build generated project with your compiler, e. g. Visual Studio
 ```
 ## Notes
-For older compilers tou need to alter code. Replace `jthread` with `thread` (and uncomment some code to `join()` them on application stop), replace formatting and use older streams.
+For older compilers you need to alter code. Replace `jthread` with `thread` (and uncomment some code to `join()` them on application stop), replace formatting and use older streams.
