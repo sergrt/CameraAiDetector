@@ -192,17 +192,16 @@ void Core::captureThreadFunc() {
 
             if (buffer_size % 10 == 0) {
                 Logger(LL_INFO) << "buffer size = " << buffer_size;
-                if (buffer_size > 100) {
-                    //Logger(LL_WARNING) << "buffer size > 100";
-                }
-                if (buffer_size > 500) {
-                    // TODO: add strategy to settings.json - if video file is processed then it's better to wait a little here instead of dropping
-                    if (!video_writer_) { // Do not drop cache while recording video - it might be processed later
-                        Logger(LL_ERROR) << "buffer size > 500, dropping cache";
-                        std::lock_guard lock(buffer_mutex_);
-                        const size_t half = buffer_.size() / 2;
-                        buffer_.erase(buffer_.begin(), buffer_.end() - half);
-                    }
+            }
+            if (buffer_size > 500) {  // Approx 20 sec of 25 fps stream
+                if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::Delay) {
+                    Logger(LL_WARNING) << "buffer size > 500, delay capture";
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                } else if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::DropHalf) {
+                    Logger(LL_WARNING) << "buffer size > 500, dropping cache";
+                    std::lock_guard lock(buffer_mutex_);
+                    const size_t half = buffer_.size() / 2;
+                    buffer_.erase(buffer_.begin(), buffer_.end() - half);
                 }
             }
             

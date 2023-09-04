@@ -12,6 +12,12 @@ struct Settings {
     size_t delay_after_error_ms = 2'000;  // Delay after frame obtain error
     size_t cooldown_write_time_ms = 5'000;  // Time to write after object became not detected - align this with telegram alarm notification
 
+    enum class BufferOverflowStrategy {
+        Delay,
+        DropHalf
+    };
+    BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::Delay;
+
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
     std::string min_confidence = "0.4";  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
     int nth_detect_frame = 10;  // Perform detect on evry nth frame

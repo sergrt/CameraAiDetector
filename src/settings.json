@@ -4,6 +4,7 @@
     "errors_before_reconnect" : 5,
     "delay_after_error_ms" : 2000,
     "cooldown_write_time_ms" : 5000,
+    "buffer_overflow_strategy" : 1,
 
     "codeproject_ai_url" : "http://localhost:32168/v1/vision/custom/ipcam-general",
     "min_confidence" : 0.4,

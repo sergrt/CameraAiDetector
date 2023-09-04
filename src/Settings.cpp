@@ -20,6 +20,7 @@ Settings loadSettings() {
     settings.errors_before_reconnect = json.value("errors_before_reconnect", settings.errors_before_reconnect);
     settings.delay_after_error_ms = json.value("delay_after_error_ms", settings.delay_after_error_ms);
     settings.cooldown_write_time_ms = json.value("cooldown_write_time_ms", settings.cooldown_write_time_ms);
+    settings.buffer_overflow_strategy = static_cast<Settings::BufferOverflowStrategy>(json["buffer_overflow_strategy"]);  // TODO: add str to enum
 
     settings.codeproject_ai_url = json["codeproject_ai_url"];
     settings.min_confidence = std::to_string(json.value("min_confidence", 0.4));
@@ -33,7 +34,7 @@ Settings loadSettings() {
     settings.allowed_users = json["allowed_users"].get<std::vector<uint64_t>>();
     settings.telegram_notification_delay_ms = json.value("telegram_notification_delay_ms", settings.telegram_notification_delay_ms);
 
-    settings.log_severity = json.value("log_severity", settings.log_severity);
+    settings.log_severity = json.value("log_severity", settings.log_severity);  // TODO: add str to enum
     settings.log_filename = json.value("log_filename", settings.log_filename);
 
     return settings;
