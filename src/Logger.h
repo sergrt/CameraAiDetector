@@ -15,7 +15,7 @@ extern std::ostream* app_log_stream;
 
 class Logger final {
 public:
-    Logger(LogLevel level);
+    explicit Logger(LogLevel level);
     ~Logger();
 
     template<typename T>
@@ -43,7 +43,7 @@ private:
     bool something_written_ = false;
 };
 
-// TODO : Consider shorcuts, like following:
+// TODO: Consider shortcuts, like following:
 // inline Logger LogInfo() {
 //     return Logger(LL_INFO);
 // }

@@ -16,7 +16,7 @@
 
 class Core final {
 public:
-    Core(const Settings& settings);
+    explicit Core(Settings settings);
     ~Core();
 
     void start();
@@ -28,10 +28,10 @@ private:
 
     void postOnDemandPhoto(const cv::Mat& frame);
     void postAlarmPhoto(const cv::Mat& frame);
-    void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
-    void initVideoWriter();
     void postVideoPreview();
 
+    static void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
+    void initVideoWriter();
     bool isCooldownFinished() const;
     bool isAlarmImageDelayPassed() const;
 
@@ -47,8 +47,7 @@ private:
 
     std::optional<std::chrono::time_point<std::chrono::steady_clock>> first_cooldown_frame_timestamp_;
     std::chrono::time_point<std::chrono::steady_clock> last_alarm_photo_sent_ = std::chrono::steady_clock::now() - std::chrono::hours(100);  // std::chrono::time_point<std::chrono::steady_clock>::max();
-    
-    
+
     std::deque<cv::Mat> buffer_;
     std::mutex buffer_mutex_;
     std::condition_variable buffer_cv_;

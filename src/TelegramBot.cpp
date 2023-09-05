@@ -145,7 +145,7 @@ std::string TelegramBot::videoCmdPrefix() {
 
 void TelegramBot::pollThreadFunc() {
     bot_->getApi().deleteWebhook();
-    TgBot::TgLongPoll longPoll(*bot_.get());
+    TgBot::TgLongPoll longPoll(*bot_);
 
     while (!stop_) {
         Logger(LL_TRACE) << "LongPoll start";

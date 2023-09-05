@@ -22,8 +22,8 @@ std::string generateFileName(const std::string& prefix) {
 
 }  // namespace
 
-Core::Core(const Settings& settings)
-    : settings_(settings),
+Core::Core(Settings settings)
+    : settings_(std::move(settings)),
       frame_reader_(settings_.source),
       bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users),
       ai_facade_(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format) {
@@ -148,7 +148,7 @@ void Core::processingThreadFunc() {
                         }
                     }
                 }
-            }  // Not detcted
+            }  // Not detected
         }
     }
 }
@@ -201,7 +201,7 @@ void Core::captureThreadFunc() {
                     Logger(LL_WARNING) << "buffer size > 500, dropping cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
-                    buffer_.erase(buffer_.begin(), buffer_.end() - half);
+                    buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));
                 }
             }
         }

@@ -53,12 +53,12 @@ cv::Mat VideoWriter::getPreviewImage() const {
 
     constexpr size_t preview_images = 9;  // 3x3 grid
     
-    const double step = preview_frames_.size() / static_cast<double>(preview_images);
+    const double step = static_cast<double>(preview_frames_.size()) / preview_images;
     Logger(LL_INFO) << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
     for (int i = 0; i < preview_images; ++i) {
-        const size_t idx = static_cast<size_t>(step * i);
+        const auto idx = static_cast<size_t>(step * i);
         if (i % 3 == 0) {
             Logger(LL_INFO) << "Add row, idx = " << idx;
             rows.push_back(preview_frames_[idx]);

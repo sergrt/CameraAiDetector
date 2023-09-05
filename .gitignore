@@ -38,3 +38,5 @@ build/
 gtest/
 
 3rdparty/
+.idea/
+cmake-*/

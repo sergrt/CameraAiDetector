@@ -71,5 +71,5 @@ nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t dat
         Logger(LL_ERROR) << "curl_easy_perform() failed: " << curl_easy_strerror(res);
     }
 
-    return nlohmann::json();
+    return {};
 }

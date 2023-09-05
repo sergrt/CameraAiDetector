@@ -20,10 +20,10 @@ struct Settings {
 
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
     std::string min_confidence = "0.4";  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
-    int nth_detect_frame = 10;  // Perform detect on evry nth frame
+    int nth_detect_frame = 10;  // Perform detect on every nth frame
     bool use_image_scale = true;  // Use image scale
-    double img_scale_x = 0.5;  // Scale factor before sending to ai
-    double img_scale_y = 0.5;  // Scale factor before sending to ai
+    double img_scale_x = 0.5;  // Scale factor before sending to AI
+    double img_scale_y = 0.5;  // Scale factor before sending to AI
     std::string img_format = "jpg";  // any cv and mime compatible type
     
     // Telegram bot preferences
@@ -33,7 +33,7 @@ struct Settings {
 
     // Log options
     int log_severity = 1;
-    std::string log_filename = "123";  // empty string for cout
+    std::string log_filename = "debug.log";  // empty string for cout
 };
 
 Settings loadSettings();

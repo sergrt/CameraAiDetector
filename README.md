@@ -2,7 +2,7 @@
 Camera and video AI detection/notification system
 
 This application is based on CodeProject AI (https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way), and performs the following:
-- Capture video stream (from camera - e. g. **rtsp**, or any video file or source, supported by OpenCV)
+- Capture video stream (from camera - e.g. **rtsp**, or any video file or source, supported by OpenCV)
 - Detect objects using AI - persons, animals, vehicles, bicycles etc.
 - Send notifications via Telegram
 - Save video based on detection
@@ -41,7 +41,7 @@ The application is written using C++, so it can be compiled on any supported pla
     - ZLib
 
 ## Configuration
-Configuration is stored in `settings.json` file, and options are (mostly) self-explainatory. Some notes:
+Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
 - `cooldown_write_time_ms` - time (in milliseconds) to write after object disappears
 - `nth_detect_frame` - send every nth frame to AI. This helps to spare some system resources
 
@@ -49,14 +49,14 @@ To tweak performance, try to use different frame scaling, and different image fo
 
 ## Compilation
 ### Linux
-Linux compilation is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's CMakeLists.txt, see Windows installation section.
+Compilation for Linux is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's CMakeLists.txt, see Windows installation section.
 ### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
 
 #### Install CodeProject AI server
 Download here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
 
-#### Clone application repositiory and create 3rdparty dir:
+#### Clone application repository and create 3rdparty dir:
 ```
 $ git clone https://github.com/sergrt/CameraAiDetector.git
 $ cd CameraAiDetector
@@ -91,7 +91,7 @@ $ nmake.exe -f makefile
 ```
 #### Compile Boost
 Download boost lib from boost.org
-Unpack into `3rdparty` (you should have filetree like this: `3rdparty/boost/bootstrap.bat`)
+Unpack into `3rdparty` (you should have file tree like this: `3rdparty/boost/bootstrap.bat`)
 ```
 # From 3rdparty/boost dir:
 $ ./bootstrap.bat
