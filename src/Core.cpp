@@ -13,10 +13,13 @@ namespace {
 std::string generateFileName(const std::string& prefix) {
     const auto tp = std::chrono::system_clock::now();
     std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", tp);
-    for (auto& c : timestamp) {
+
+    // Remove dots - inconvinient to use them for telegram commands 
+    std::for_each(begin(timestamp), end(timestamp), [](auto& c) {
         if (c == '.')
             c = '_';
-    }
+    });
+
     return prefix + timestamp;
 }
 
@@ -104,11 +107,12 @@ void Core::processingThreadFunc() {
 
         if (check_frame) {
             std::vector<unsigned char> img_buffer;
-            const cv::Mat& work_frame = (settings_.use_image_scale ? cv::Mat() : frame);
-            if (settings_.use_image_scale)
-                cv::resize(frame, work_frame, scaled_size);
 
-            if (!cv::imencode(img_format, work_frame, img_buffer, img_encode_param)) {
+            cv::Mat scaled_frame;
+            if (settings_.use_image_scale)
+                cv::resize(frame, scaled_frame, scaled_size);
+
+            if (!cv::imencode(img_format, (settings_.use_image_scale ? scaled_frame : frame), img_buffer, img_encode_param)) {
                 Logger(LL_TRACE) << "Frame encoding failed";
                 continue;
             }
@@ -127,8 +131,9 @@ void Core::processingThreadFunc() {
                 video_writer_->write(frame);
 
                 if (isAlarmImageDelayPassed()) {
-                    drawBoxes(work_frame, detect_result["predictions"]);
-                    postAlarmPhoto(work_frame);
+                    auto& alarm_frame = (settings_.use_image_scale ? scaled_frame : frame);
+                    drawBoxes(alarm_frame, detect_result["predictions"]);
+                    postAlarmPhoto(alarm_frame);
                 }
             } else {  // Not detected
                 if (video_writer_) {

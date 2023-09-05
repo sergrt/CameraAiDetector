@@ -5,6 +5,9 @@
 #include <stdexcept>
 
 const auto fourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
+constexpr size_t initial_buffer_size = 120;  // Some reasonable value to fit frames without reallocate too often
+constexpr auto preview_sampling_time = std::chrono::milliseconds(2000);  // TODO: consider move to config
+constexpr size_t preview_images = 9;  // 3x3 grid. Should be square number
 
 namespace {
 
@@ -19,16 +22,14 @@ cv::Mat createEmptyPreview() {
 
 VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const std::string& file_name, const StreamProperties& stream_properties)
     : file_name_((storage_path / file_name).generic_string()) {
-    const bool res = writer_.open(file_name_, fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height));
-
-    if (!res) {
+    if (!writer_.open(file_name_, fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name_;
         Logger(LL_ERROR) << msg;
         throw std::runtime_error(msg);
     }
     
     last_frame_time_ = std::chrono::steady_clock::now();
-    preview_frames_.reserve(120);  // Some reasonable value to fit frames without reallocate too often
+    preview_frames_.reserve(initial_buffer_size);
 }
 
 std::string VideoWriter::getExtension() {
@@ -38,7 +39,7 @@ std::string VideoWriter::getExtension() {
 void VideoWriter::write(const cv::Mat& frame) {
     writer_.write(frame);
     
-    if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= std::chrono::milliseconds(2000)) { // TODO: config
+    if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_time) {
         last_frame_time_ = cur_time;
         preview_frames_.push_back(frame);
         // TODO: check size to prevent mem issues
@@ -51,15 +52,14 @@ cv::Mat VideoWriter::getPreviewImage() const {
         return createEmptyPreview();
     }
 
-    constexpr size_t preview_images = 9;  // 3x3 grid
-    
     const double step = static_cast<double>(preview_frames_.size()) / preview_images;
     Logger(LL_INFO) << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
+    const auto images_in_row = static_cast<int>(std::sqrt(preview_images));
     for (int i = 0; i < preview_images; ++i) {
         const auto idx = static_cast<size_t>(step * i);
-        if (i % 3 == 0) {
+        if (i % images_in_row == 0) {
             Logger(LL_INFO) << "Add row, idx = " << idx;
             rows.push_back(preview_frames_[idx]);
         } else {
@@ -72,7 +72,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
     for (size_t i = 1; i < rows.size(); ++i) {
         if (rows[i].cols == result.cols)
             result.push_back(rows[i]);
-        //cv::vconcat(result, rows[i], result);
+        // cv::vconcat(result, rows[i], result);
     }
 
     const double scale = 1920 / float(result.cols);  // TODO: Make preview size configurable

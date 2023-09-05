@@ -5,6 +5,31 @@
 #include <algorithm>
 #include <filesystem>
 
+namespace {
+
+bool isFilenameSafe(const std::string& file_name) {
+    static constexpr auto reserved_filenames = {"CLOCK$", "AUX",  "CON",  "NUL",  "PRN",  "COM1", "COM2", "COM3",
+                                                "COM4",   "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
+                                                "LPT3",   "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+
+    auto upper_name = file_name;
+    std::transform(begin(upper_name), end(upper_name), begin(upper_name), ::toupper);
+    auto found = std::any_of(begin(reserved_filenames), end(reserved_filenames),
+                             [&upper_name](const auto& name) { return name == upper_name; });
+
+    if (found)
+        return false;
+
+    found = std::any_of(begin(file_name), end(file_name), [](const auto& c) {
+        static const auto forbidden_chars = {'/', '?', '<', '>', ':', '.', '\\', '!', '@', '%', '^', '*', '~', '|', '\"'};
+        return std::find(cbegin(forbidden_chars), cend(forbidden_chars), c) != cend(forbidden_chars);
+    });
+
+    return !found;
+}
+
+}  // namespace
+
 TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage_path, std::vector<uint64_t> allowed_users)
     : bot_(std::make_unique<TgBot::Bot>(token))
     , storage_path_(std::move(storage_path))
@@ -32,7 +57,8 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (entry.path().extension() == ext) {
                     const auto file_name = entry.path().filename().generic_string();
-                    files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "\n";
+                    const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
+                    files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
                 }
             }
 
@@ -43,9 +69,13 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             if (StringTools::startsWith(message->text, videoCmdPrefix())) {
                 Logger(LL_INFO) << "video command received: " << message->text;
-                const std::string file_name = message->text.substr(videoCmdPrefix().size()) + VideoWriter::getExtension();
-                // TODO: sanitize file_name to have no malicious names
-                const std::filesystem::path file_path = storage_path_ / file_name;
+                const std::string file_name = message->text.substr(videoCmdPrefix().size());  // Without extension - id of file
+                if (!isFilenameSafe(file_name)) {
+                    Logger(LL_WARNING) << "User " << id << " asked suspicious filename: " << file_name;
+                    bot_->getApi().sendMessage(id, "Invalid file specified");
+                    return;
+                }
+                const std::filesystem::path file_path = storage_path_ / (file_name + VideoWriter::getExtension());
                 Logger(LL_INFO) << "Filename extracted: " << file_name << ", full path: " << file_path;
 
                 if (std::filesystem::exists(file_path)) {
