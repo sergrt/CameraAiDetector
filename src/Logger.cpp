@@ -34,7 +34,7 @@ Logger::Logger(LogLevel level)
 
 Logger::~Logger() {
     if (something_written_) {
-        //stream_ << std::endl;
+        // stream_ << std::endl;  // Useful for debug
         stream_ << "\n";
     }
 }

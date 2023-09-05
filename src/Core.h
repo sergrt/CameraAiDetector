@@ -32,6 +32,9 @@ private:
     void initVideoWriter();
     void postVideoPreview();
 
+    bool isCooldownFinished() const;
+    bool isAlarmImageDelayPassed() const;
+
     const Settings settings_;
     FrameReader frame_reader_;
     TelegramBot bot_;

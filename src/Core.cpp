@@ -57,7 +57,6 @@ void Core::postAlarmPhoto(const cv::Mat& frame) {
 } 
 
 void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
-    // Draw boxes
     for (const auto& prediction : predictions) {
         cv::rectangle(frame, cv::Point(prediction["x_min"], prediction["y_min"]), cv::Point(prediction["x_max"], prediction["y_max"]), frame_color, frame_width);
     }
@@ -75,13 +74,13 @@ void Core::processingThreadFunc() {
         static_cast<int>(frame_reader_.getStreamProperties().height * settings_.img_scale_y));
     const auto img_format = "." + settings_.img_format;
 
-    //const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 100};
+    // TODO: Check performance impact with different image quality
+    // const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 100};
     const std::vector<int> img_encode_param;
 
     while (!stop_) {
         std::unique_lock lock(buffer_mutex_);
-        buffer_cv_.wait(
-            lock, [&] { return !buffer_.empty() || stop_; });
+        buffer_cv_.wait(lock, [&] { return !buffer_.empty() || stop_; });
 
         if (stop_)
             break;
@@ -90,37 +89,33 @@ void Core::processingThreadFunc() {
         buffer_.pop_front();
         lock.unlock();
 
-        if (bot_.waitingForPhoto()) {
+        if (bot_.waitingForPhoto())
             postOnDemandPhoto(frame);
-        }
 
         static uint64_t i = 0;
-        const bool call_detect = (i++ % settings_.nth_detect_frame == 0);
+        const bool check_frame = (i++ % settings_.nth_detect_frame == 0);
 
-        if (!call_detect) {
+        if (!check_frame) {
             if (video_writer_) {
                 Logger(LL_TRACE) << "Detect not called, just write";
                 video_writer_->write(frame);
             }
         }
 
-        if (call_detect) {
+        if (check_frame) {
             std::vector<unsigned char> img_buffer;
-            //const bool imencode_res = cv::imencode(".jpg", frame, img_buffer);
-            
-            cv::Mat frame_scaled;  // used later to draw box on it and send to users
-            if (settings_.use_image_scale) {
-                cv::resize(frame, frame_scaled, scaled_size);
-                const bool imencode_res = cv::imencode(img_format, frame_scaled, img_buffer, img_encode_param);
-            } else {
-                const bool imencode_res = cv::imencode(img_format, frame, img_buffer, img_encode_param);
+            const cv::Mat& work_frame = (settings_.use_image_scale ? cv::Mat() : frame);
+            if (settings_.use_image_scale)
+                cv::resize(frame, work_frame, scaled_size);
+
+            if (!cv::imencode(img_format, work_frame, img_buffer, img_encode_param)) {
+                Logger(LL_TRACE) << "Frame encoding failed";
+                continue;
             }
+            const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
+            Logger(LL_TRACE) << "Detect result: " << detect_result;
 
-            const auto detect_json = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
-            Logger(LL_TRACE) << "Detect result: " << detect_json;
-
-            if (!detect_json.empty() && detect_json["success"] == true && detect_json.contains("predictions") && !detect_json["predictions"].empty()) {
-
+            if (!detect_result.empty() && detect_result["success"] == true && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
                     Logger(LL_INFO) << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
@@ -131,23 +126,20 @@ void Core::processingThreadFunc() {
 
                 video_writer_->write(frame);
 
-                // Check tg delay
-                if (std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.telegram_notification_delay_ms)) {
-                    const cv::Mat& mat_box = (settings_.use_image_scale ? frame_scaled : frame);
-                    drawBoxes(mat_box, detect_json["predictions"]);
-                    postAlarmPhoto(mat_box);
+                if (isAlarmImageDelayPassed()) {
+                    drawBoxes(work_frame, detect_result["predictions"]);
+                    postAlarmPhoto(work_frame);
                 }
-
             } else {  // Not detected
                 if (video_writer_) {
+                    video_writer_->write(frame);
+
                     if (!first_cooldown_frame_timestamp_) {
                         Logger(LL_INFO) << "Start cooldown writing";
-                        first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();
-                        video_writer_->write(frame);
+                        first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();    
                     } else {
-                        Logger(LL_INFO) << "Write cooldown frame";
-                        video_writer_->write(frame);
-                        if (std::chrono::steady_clock::now() - *first_cooldown_frame_timestamp_ > std::chrono::milliseconds(settings_.cooldown_write_time_ms)) {
+                        Logger(LL_INFO) << "Cooldown frame saved";
+                        if (isCooldownFinished()) {
                             Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
                             postVideoPreview();
                             // Stop cooldown
@@ -156,9 +148,17 @@ void Core::processingThreadFunc() {
                         }
                     }
                 }
-            }
+            }  // Not detcted
         }
     }
+}
+
+bool Core::isCooldownFinished() const {
+    return std::chrono::steady_clock::now() - *first_cooldown_frame_timestamp_ > std::chrono::milliseconds(settings_.cooldown_write_time_ms);
+}
+
+bool Core::isAlarmImageDelayPassed() const {
+    return std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.telegram_notification_delay_ms);
 }
 
 void Core::captureThreadFunc() {
@@ -204,7 +204,6 @@ void Core::captureThreadFunc() {
                     buffer_.erase(buffer_.begin(), buffer_.end() - half);
                 }
             }
-            
         }
     }
     stop_ = true;
