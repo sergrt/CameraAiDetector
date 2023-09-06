@@ -65,6 +65,22 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             bot_->getApi().sendMessage(id, files_list);
         }
     });
+    bot_->getEvents().onCommand("list_videos_w_previews", [&](TgBot::Message::Ptr message) {
+        if (const auto id = message->chat->id; isUserAllowed(id)) {
+            const auto ext = VideoWriter::getExtension();
+            const auto ext_len = VideoWriter::getExtension().size();
+            for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
+                if (entry.path().extension() == ext) {
+                    const auto file_name = entry.path().filename().generic_string();
+                    const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
+                    const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " +
+                                         std::to_string(file_size) + " MB\n";
+
+                    postVideoPreview("preview_" + file_name.substr(0, file_name.size() - ext_len), caption);
+                }
+            }
+        }
+    });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             if (StringTools::startsWith(message->text, videoCmdPrefix())) {
