@@ -18,15 +18,18 @@ The application is written using C++, so it can be compiled on any supported pla
 
   <img src="../media/video_preview.jpg" alt="drawing" width="300"/>
 - Allow users to get instant shot from camera
-- List all recorded videos
+- List all recorded videos - with or without previews, optionally filtered by time depth
 - Allow users to download particular video
 
 ### Telegram bot commands
 - `/start` - start using bot
 - `/image` - get instant shot from camera
-- `/list_videos` - get list of recorded videos
+- `/videos` - get list of recorded videos
+- `/previews` - get list of recorded videos with previews
 - `/video_<name>` - get video with `<name>`
 - `/ping` - check app is up and running
+
+list of videos (and previews) can be filtered. For example, use `/videos 30m` to get list of videos recorded last 30 minutes. Supported suffixes are 'm' (minutes), 'h' (hours) and 'd' (days).
 
 ### Requirements:
 - C++20 compatible compiler - application uses `jthread`, `syncstream` and `format` (see notes on how to use it with older compilers), so gcc 13 or modern Visual Studio is required

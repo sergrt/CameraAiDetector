@@ -1,29 +1,12 @@
 #include "Core.h"
 
 #include "Logger.h"
+#include "UidUtils.h"
 
-#include <format>
 #include <chrono>
 
 const cv::Scalar frame_color = cv::Scalar(0.0, 0.0, 200.0);
 const int frame_width = 2;
-
-namespace {
-
-std::string generateFileName(const std::string& prefix) {
-    const std::chrono::zoned_time cur_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
-    std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", cur_time);
-
-    // Remove dots - inconvinient to use them for telegram commands 
-    std::for_each(begin(timestamp), end(timestamp), [](auto& c) {
-        if (c == '.')
-            c = '_';
-    });
-
-    return prefix + timestamp;
-}
-
-}  // namespace
 
 Core::Core(Settings settings)
     : settings_(std::move(settings)),
@@ -48,8 +31,7 @@ void Core::postOnDemandPhoto(const cv::Mat& frame) {
 void Core::initVideoWriter() {
     Logger(LL_INFO) << "Init video writer";
     const auto stream_properties = frame_reader_.getStreamProperties();
-    const auto file_name = generateFileName(VideoWriter::getVideoFilePrefix()) + VideoWriter::getExtension();
-    video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, file_name, stream_properties);
+    video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, stream_properties);
 }
 
 void Core::postAlarmPhoto(const cv::Mat& frame) {
@@ -65,14 +47,14 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     }
 }
 
-std::string Core::saveVideoPreview(const std::string& video_file_id) {
-    const auto file_name = "preview_" + video_file_id + ".jpg";
+std::string Core::saveVideoPreview(const std::string& video_file_uid) {
+    const auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
     cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
     return file_name;
 }
 
 void Core::postVideoPreview(const std::string& file_name) {
-    bot_.postVideoPreview(file_name, "Video: " + TelegramBot::videoCmdPrefix() + video_writer_->getFileNameStripped());
+    bot_.postVideoPreview(file_name);
 }
 
 void Core::processingThreadFunc() {
@@ -149,8 +131,8 @@ void Core::processingThreadFunc() {
                     } else {
                         Logger(LL_INFO) << "Cooldown frame saved";
                         if (isCooldownFinished()) {
-                            Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
-                            const auto preview_file_name = saveVideoPreview(video_writer_->getFileNameStripped());
+                            Logger(LL_INFO) << "Finish writing file with uid = \"" << video_writer_->getUid() << "\"";
+                            const auto preview_file_name = saveVideoPreview(video_writer_->getUid());
                             if (settings_.send_video_previews)
                                 postVideoPreview(preview_file_name);
                             // Stop cooldown

@@ -1,5 +1,6 @@
 #include "Logger.h"
 #include "TelegramBot.h"
+#include "UidUtils.h"
 #include "VideoWriter.h"
 
 #include <algorithm>
@@ -8,15 +9,19 @@
 
 namespace {
 
+std::string to_upper(const std::string& str) {
+    auto upper_str = str;
+    std::transform(begin(upper_str), end(upper_str), begin(upper_str), ::toupper);
+    return upper_str;
+}
+
 bool isFilenameSafe(const std::string& file_name) {
     static constexpr auto reserved_filenames = {"CLOCK$", "AUX",  "CON",  "NUL",  "PRN",  "COM1", "COM2", "COM3",
                                                 "COM4",   "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
                                                 "LPT3",   "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
 
-    auto upper_name = file_name;
-    std::transform(begin(upper_name), end(upper_name), begin(upper_name), ::toupper);
     auto found = std::any_of(begin(reserved_filenames), end(reserved_filenames),
-                             [&upper_name](const auto& name) { return name == upper_name; });
+                             [upper_name = to_upper(file_name)](const auto& name) { return name == upper_name; });
 
     if (found)
         return false;
@@ -30,28 +35,27 @@ bool isFilenameSafe(const std::string& file_name) {
 }
 
 struct Filter {
+    // Using struct here - potentially this filter is extensible to different types of detects etc.
     std::chrono::minutes depth;
 };
 
 std::optional<Filter> getFilter(const std::string& text) {
-    // Filters example:
-    // -10m
-    // -3h
-    // -1d
-    static const auto filter_regex = std::regex(R"(.*-(\d+)(m|M|h|H|d|D))");
+    // Filters are time depth, e.g.:
+    //   10m
+    //   3h
+    //   1d
+    static const auto filter_regex = std::regex(R"(.* (\d+)(m|M|h|H|d|D))");
     std::smatch match;
     if (std::regex_match(text, match, filter_regex)) {
-        auto upper_period = std::string(match[2]);
-        std::transform(begin(upper_period), end(upper_period), begin(upper_period), ::toupper);
-
+        const auto period = to_upper(match[2]);
         const auto count = std::atoi(std::string(match[1]).c_str());
 
         Filter filter;
-        if (upper_period == "M") {
+        if (period == "M") {
             filter.depth = std::chrono::minutes(count);
-        } else if (upper_period == "H") {
+        } else if (period == "H") {
             filter.depth = std::chrono::minutes(count * 60);
-        } else if (upper_period == "D") {
+        } else if (period == "D") {
             filter.depth = std::chrono::minutes(count * 60 * 24);
         }
         return filter;
@@ -60,16 +64,9 @@ std::optional<Filter> getFilter(const std::string& text) {
     return {};
 }
 
-bool applyFilter(const Filter& filter, const std::string file_name) {
-    auto file_datetime = file_name.substr(VideoWriter::getVideoFilePrefix().size());
-    file_datetime = file_datetime.substr(0, file_datetime.find("_"));
-
-    std::tm tm = {};
-    std::stringstream ss(file_datetime);
-    ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
-    auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
-
-    return std::chrono::system_clock::now() - tp < filter.depth;
+bool applyFilter(const Filter& filter, const std::string file_name) {    
+    const auto uid = VideoWriter::getUidFromVideoFileName(file_name);
+    return std::chrono::system_clock::now() - getTimestampFromUid(uid) < filter.depth;
 }
 
 }  // namespace
@@ -125,7 +122,8 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     if (!filter || applyFilter(*filter, file_name)) {
                         const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
                         const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
-                        postVideoPreview("preview_" + file_name.substr(0, file_name.size() - ext_len) + ".jpg", caption);
+                        const auto uid = file_name.substr(0, file_name.size() - ext_len);
+                        postVideoPreview(VideoWriter::generatePreviewFileName(uid));
                     }
                 }
             }
@@ -171,6 +169,11 @@ bool TelegramBot::waitingForPhoto() const {
 void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients) {
     std::lock_guard lock(photo_mutex_);
     const auto path = (storage_path_ / file_name);
+    if (!std::filesystem::exists(path)) {  // TODO: Refactor here and on for something like getCheckedFilePath(file_name)
+        Logger(LL_ERROR) << "File " << path << " is missing";
+        return;
+    }
+
     for (const auto& user : recipients) {
         bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
     }
@@ -179,6 +182,11 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
 
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
     const auto path = (storage_path_ / file_name);
+    if (!std::filesystem::exists(path)) {
+        Logger(LL_ERROR) << "File " << path << " is missing";
+        return;
+    }
+
     for (const auto& user : allowed_users_) {
         bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
     }
@@ -192,6 +200,11 @@ void TelegramBot::sendMessage(const std::string& message) {
 
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
     const auto path = (storage_path_ / file_name);
+    if (!std::filesystem::exists(path)) {
+        Logger(LL_ERROR) << "File " << path << " is missing";
+        return;
+    }
+
     for (const auto& user : allowed_users_) {
         bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);  // NOTE: No notification here
     }
@@ -226,7 +239,8 @@ void TelegramBot::postMessage(const std::string& message) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& message) {
+void TelegramBot::postVideoPreview(const std::string& file_name) {
+    const std::string message = TelegramBot::videoCmdPrefix() + file_name.substr(0, file_name.size() - VideoWriter::getExtension().size());
     {
         std::lock_guard lock(queue_mutex_);
         notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, message, file_name);

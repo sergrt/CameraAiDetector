@@ -36,7 +36,7 @@ public:
     void postOnDemandPhoto(const std::string& file_name);
     void postAlarmPhoto(const std::string& file_name);
     void postMessage(const std::string& message);
-    void postVideoPreview(const std::string& file_name, const std::string& message);
+    void postVideoPreview(const std::string& file_name);
     
     bool waitingForPhoto() const;
 

@@ -10,17 +10,20 @@
 
 class VideoWriter final {
 public:
-    VideoWriter(const std::filesystem::path& storage_path, const std::string& file_name, const StreamProperties& stream_properties);
+    VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties);
 
     void write(const cv::Mat& frame);
-    std::string getFileNameStripped() const;
-    static std::string getExtension();
+
+    std::string getUid() const;
     cv::Mat getPreviewImage() const;
-    static std::string getVideoFilePrefix();
+
+    static std::string getExtension();
+    static std::string generatePreviewFileName(const std::string& uid);
+    static std::string getUidFromVideoFileName(const std::string& file_name);
 
 private:
     cv::VideoWriter writer_;
-    std::string file_name_;
+    std::string uid_;
 
     std::chrono::time_point<std::chrono::steady_clock> last_frame_time_;
     std::vector<cv::Mat> preview_frames_;
