@@ -18,7 +18,8 @@
     "allowed_users" : [
         900000000
     ],
-    "telegram_notification_delay_ms" : 30000,
+    "alarm_notification_delay_ms" : 30000,
+	"send_video_previews" : true,
 
     "log_severity" : 1,
     "log_filename" : ""

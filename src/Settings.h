@@ -29,7 +29,8 @@ struct Settings {
     // Telegram bot preferences
     std::string bot_token;  // Keep this in secret
     std::vector<uint64_t> allowed_users; // allowed users
-    size_t telegram_notification_delay_ms = 20'000;  // Delay before next telegram alarm
+    size_t alarm_notification_delay_ms = 20'000;  // Delay before next telegram alarm
+    bool send_video_previews = true;  // Send video preview as soon as video has been recorded
 
     // Log options
     int log_severity = 1;

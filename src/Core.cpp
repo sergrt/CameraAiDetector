@@ -146,7 +146,8 @@ void Core::processingThreadFunc() {
                         Logger(LL_INFO) << "Cooldown frame saved";
                         if (isCooldownFinished()) {
                             Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
-                            postVideoPreview();
+                            if (settings_.send_video_previews)
+                                postVideoPreview();
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();
@@ -163,7 +164,7 @@ bool Core::isCooldownFinished() const {
 }
 
 bool Core::isAlarmImageDelayPassed() const {
-    return std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.telegram_notification_delay_ms);
+    return std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.alarm_notification_delay_ms);
 }
 
 void Core::captureThreadFunc() {

@@ -32,7 +32,8 @@ Settings loadSettings() {
     
     settings.bot_token = json["bot_token"];
     settings.allowed_users = json["allowed_users"].get<std::vector<uint64_t>>();
-    settings.telegram_notification_delay_ms = json.value("telegram_notification_delay_ms", settings.telegram_notification_delay_ms);
+    settings.alarm_notification_delay_ms = json.value("alarm_notification_delay_ms", settings.alarm_notification_delay_ms);
+    settings.send_video_previews = json.value("send_video_previews", settings.send_video_previews);
 
     settings.log_severity = json.value("log_severity", settings.log_severity);  // TODO: add str to enum
     settings.log_filename = json.value("log_filename", settings.log_filename);
