@@ -24,7 +24,7 @@ cv::Mat createEmptyPreview() {
 
 VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties) {
     const auto file_name = generateFileName(video_file_prefix, &uid_) + getExtension();
-    if (!writer_.open(file_name, fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
+    if (!writer_.open((storage_path / file_name).generic_string(), fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
         Logger(LL_ERROR) << msg;
         throw std::runtime_error(msg);
