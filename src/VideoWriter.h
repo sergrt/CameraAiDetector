@@ -20,6 +20,7 @@ public:
     static std::string getExtension();
     static std::string generatePreviewFileName(const std::string& uid);
     static std::string getUidFromVideoFileName(const std::string& file_name);
+    static std::string getVideoFilePrefix();
 
 private:
     cv::VideoWriter writer_;

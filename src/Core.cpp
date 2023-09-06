@@ -53,8 +53,8 @@ std::string Core::saveVideoPreview(const std::string& video_file_uid) {
     return file_name;
 }
 
-void Core::postVideoPreview(const std::string& file_name) {
-    bot_.postVideoPreview(file_name);
+void Core::postVideoPreview(const std::string& file_name, const std::string& uid) {
+    bot_.postVideoPreview(file_name, uid);
 }
 
 void Core::processingThreadFunc() {
@@ -131,10 +131,11 @@ void Core::processingThreadFunc() {
                     } else {
                         Logger(LL_INFO) << "Cooldown frame saved";
                         if (isCooldownFinished()) {
-                            Logger(LL_INFO) << "Finish writing file with uid = \"" << video_writer_->getUid() << "\"";
-                            const auto preview_file_name = saveVideoPreview(video_writer_->getUid());
+                            const auto uid = video_writer_->getUid();
+                            Logger(LL_INFO) << "Finish writing file with uid = \"" << uid << "\"";
+                            const auto preview_file_name = saveVideoPreview(uid);
                             if (settings_.send_video_previews)
-                                postVideoPreview(preview_file_name);
+                                postVideoPreview(preview_file_name, uid);
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();

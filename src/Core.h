@@ -30,7 +30,7 @@ private:
     void postOnDemandPhoto(const cv::Mat& frame);
     void postAlarmPhoto(const cv::Mat& frame);
     std::string saveVideoPreview(const std::string& video_file_uid);
-    void postVideoPreview(const std::string& file_name);
+    void postVideoPreview(const std::string& file_name, const std::string& uid);
 
     static void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
     void initVideoWriter();

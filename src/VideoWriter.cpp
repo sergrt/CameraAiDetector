@@ -9,7 +9,6 @@ const auto fourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
 constexpr size_t initial_buffer_size = 120;  // Some reasonable value to fit frames without reallocate too often
 constexpr auto preview_sampling_time = std::chrono::milliseconds(2000);  // TODO: consider move to config
 constexpr size_t preview_images = 9;  // 3x3 grid. Should be square number
-const auto video_file_prefix = std::string("v_");
 
 namespace {
 
@@ -23,7 +22,7 @@ cv::Mat createEmptyPreview() {
 }  // namespace
 
 VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties) {
-    const auto file_name = generateFileName(video_file_prefix, &uid_) + getExtension();
+    const auto file_name = generateFileName(getVideoFilePrefix(), &uid_) + getExtension();
     if (!writer_.open((storage_path / file_name).generic_string(), fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
         Logger(LL_ERROR) << msg;
@@ -38,12 +37,16 @@ std::string VideoWriter::getExtension() {
     return std::string(".mp4");
 }
 
+std::string VideoWriter::getVideoFilePrefix() {
+    return std::string("v_");
+}
+
 std::string VideoWriter::generatePreviewFileName(const std::string& uid) {
     return "preview_" + uid + ".jpg";
 }
 
 std::string VideoWriter::getUidFromVideoFileName(const std::string& file_name) {
-    const auto uid = file_name.substr(video_file_prefix.size(), file_name.size() - video_file_prefix.size() - getExtension().size());
+    const auto uid = file_name.substr(getVideoFilePrefix().size(), file_name.size() - getVideoFilePrefix().size() - getExtension().size());
     return uid;
 }
 

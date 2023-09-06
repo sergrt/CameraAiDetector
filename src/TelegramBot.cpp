@@ -101,7 +101,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     const auto file_name = entry.path().filename().generic_string();
                     if (!filter || applyFilter(*filter, file_name)) {
                         const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                        files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
+                        files_list += videoCmdPrefix() + VideoWriter::getUidFromVideoFileName(file_name) + "    " + std::to_string(file_size) + " MB\n";
                     }
                 }
             }
@@ -122,8 +122,8 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     if (!filter || applyFilter(*filter, file_name)) {
                         const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
                         const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
-                        const auto uid = file_name.substr(0, file_name.size() - ext_len);
-                        postVideoPreview(VideoWriter::generatePreviewFileName(uid));
+                        const auto uid = VideoWriter::getUidFromVideoFileName(file_name);
+                        postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
                     }
                 }
             }
@@ -139,7 +139,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     bot_->getApi().sendMessage(id, "Invalid file specified");
                     return;
                 }
-                const std::filesystem::path file_path = storage_path_ / (file_name + VideoWriter::getExtension());
+                const std::filesystem::path file_path = storage_path_ / (VideoWriter::getVideoFilePrefix() + file_name + VideoWriter::getExtension());
                 Logger(LL_INFO) << "Filename extracted: " << file_name << ", full path: " << file_path;
 
                 if (std::filesystem::exists(file_path)) {
@@ -239,8 +239,8 @@ void TelegramBot::postMessage(const std::string& message) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::postVideoPreview(const std::string& file_name) {
-    const std::string message = TelegramBot::videoCmdPrefix() + file_name.substr(0, file_name.size() - VideoWriter::getExtension().size());
+void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& video_uid) {
+    const std::string message = TelegramBot::videoCmdPrefix() + video_uid;
     {
         std::lock_guard lock(queue_mutex_);
         notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, message, file_name);
