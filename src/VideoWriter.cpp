@@ -36,6 +36,10 @@ std::string VideoWriter::getExtension() {
     return ".mp4";
 }
 
+std::string VideoWriter::getVideoFilePrefix() {
+    return "v_";
+}
+
 void VideoWriter::write(const cv::Mat& frame) {
     writer_.write(frame);
     

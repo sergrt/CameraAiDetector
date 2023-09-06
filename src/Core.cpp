@@ -11,8 +11,8 @@ const int frame_width = 2;
 namespace {
 
 std::string generateFileName(const std::string& prefix) {
-    const auto tp = std::chrono::system_clock::now();
-    std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", tp);
+    const std::chrono::zoned_time cur_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+    std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", cur_time);
 
     // Remove dots - inconvinient to use them for telegram commands 
     std::for_each(begin(timestamp), end(timestamp), [](auto& c) {
@@ -48,7 +48,7 @@ void Core::postOnDemandPhoto(const cv::Mat& frame) {
 void Core::initVideoWriter() {
     Logger(LL_INFO) << "Init video writer";
     const auto stream_properties = frame_reader_.getStreamProperties();
-    const auto file_name = generateFileName("v_") + VideoWriter::getExtension();
+    const auto file_name = generateFileName(VideoWriter::getVideoFilePrefix()) + VideoWriter::getExtension();
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, file_name, stream_properties);
 }
 
@@ -65,9 +65,13 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     }
 }
 
-void Core::postVideoPreview() {
-    const auto file_name = generateFileName("preview_") + ".jpg";
+std::string Core::saveVideoPreview(const std::string& video_file_id) {
+    const auto file_name = "preview_" + video_file_id + ".jpg";
     cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
+    return file_name;
+}
+
+void Core::postVideoPreview(const std::string& file_name) {
     bot_.postVideoPreview(file_name, "Video: " + TelegramBot::videoCmdPrefix() + video_writer_->getFileNameStripped());
 }
 
@@ -146,8 +150,9 @@ void Core::processingThreadFunc() {
                         Logger(LL_INFO) << "Cooldown frame saved";
                         if (isCooldownFinished()) {
                             Logger(LL_INFO) << "Finish writing file \"" << video_writer_->getFileNameStripped() << "\"";
+                            const auto preview_file_name = saveVideoPreview(video_writer_->getFileNameStripped());
                             if (settings_.send_video_previews)
-                                postVideoPreview();
+                                postVideoPreview(preview_file_name);
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();

@@ -16,6 +16,7 @@ public:
     std::string getFileNameStripped() const;
     static std::string getExtension();
     cv::Mat getPreviewImage() const;
+    static std::string getVideoFilePrefix();
 
 private:
     cv::VideoWriter writer_;

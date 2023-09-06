@@ -12,6 +12,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <string>
 #include <thread>
 
 class Core final {
@@ -28,7 +29,8 @@ private:
 
     void postOnDemandPhoto(const cv::Mat& frame);
     void postAlarmPhoto(const cv::Mat& frame);
-    void postVideoPreview();
+    std::string saveVideoPreview(const std::string& video_file_id);
+    void postVideoPreview(const std::string& file_name);
 
     static void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
     void initVideoWriter();

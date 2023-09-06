@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <regex>
 
 namespace {
 
@@ -28,6 +29,49 @@ bool isFilenameSafe(const std::string& file_name) {
     return !found;
 }
 
+struct Filter {
+    std::chrono::minutes depth;
+};
+
+std::optional<Filter> getFilter(const std::string& text) {
+    // Filters example:
+    // -10m
+    // -3h
+    // -1d
+    static const auto filter_regex = std::regex(R"(.*-(\d+)(m|M|h|H|d|D))");
+    std::smatch match;
+    if (std::regex_match(text, match, filter_regex)) {
+        auto upper_period = std::string(match[2]);
+        std::transform(begin(upper_period), end(upper_period), begin(upper_period), ::toupper);
+
+        const auto count = std::atoi(std::string(match[1]).c_str());
+
+        Filter filter;
+        if (upper_period == "M") {
+            filter.depth = std::chrono::minutes(count);
+        } else if (upper_period == "H") {
+            filter.depth = std::chrono::minutes(count * 60);
+        } else if (upper_period == "D") {
+            filter.depth = std::chrono::minutes(count * 60 * 24);
+        }
+        return filter;
+    }
+
+    return {};
+}
+
+bool applyFilter(const Filter& filter, const std::string file_name) {
+    auto file_datetime = file_name.substr(VideoWriter::getVideoFilePrefix().size());
+    file_datetime = file_datetime.substr(0, file_datetime.find("_"));
+
+    std::tm tm = {};
+    std::stringstream ss(file_datetime);
+    ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
+    auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+
+    return std::chrono::system_clock::now() - tp < filter.depth;
+}
+
 }  // namespace
 
 TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage_path, std::vector<uint64_t> allowed_users)
@@ -49,34 +93,40 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         if (const auto id = message->chat->id; isUserAllowed(id))
             bot_->getApi().sendMessage(id, "ok");
     });
-    bot_->getEvents().onCommand("list_videos", [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand("videos", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             std::string files_list;
             const auto ext = VideoWriter::getExtension();
             const auto ext_len = VideoWriter::getExtension().size();
+            const auto filter = getFilter(message->text);
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (entry.path().extension() == ext) {
                     const auto file_name = entry.path().filename().generic_string();
-                    const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                    files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
+                    if (!filter || applyFilter(*filter, file_name)) {
+                        const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
+                        files_list += videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
+                    }
                 }
             }
-
-            bot_->getApi().sendMessage(id, files_list);
+            if (!files_list.empty())
+                bot_->getApi().sendMessage(id, files_list);
+            else
+                bot_->getApi().sendMessage(id, "No files found");
         }
     });
-    bot_->getEvents().onCommand("list_videos_w_previews", [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand("previews", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             const auto ext = VideoWriter::getExtension();
             const auto ext_len = VideoWriter::getExtension().size();
+            const auto filter = getFilter(message->text);
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (entry.path().extension() == ext) {
                     const auto file_name = entry.path().filename().generic_string();
-                    const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                    const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " +
-                                         std::to_string(file_size) + " MB\n";
-
-                    postVideoPreview("preview_" + file_name.substr(0, file_name.size() - ext_len), caption);
+                    if (!filter || applyFilter(*filter, file_name)) {
+                        const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
+                        const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
+                        postVideoPreview("preview_" + file_name.substr(0, file_name.size() - ext_len) + ".jpg", caption);
+                    }
                 }
             }
         }
