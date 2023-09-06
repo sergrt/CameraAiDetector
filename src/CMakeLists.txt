@@ -64,6 +64,7 @@ set(HEADER
   Settings.h
   StreamProperties.h
   TelegramBot.h
+  UidUtils.h
   VideoWriter.h)
 
 add_executable(${PROJECT_NAME} ${SOURCE} ${HEADER})
