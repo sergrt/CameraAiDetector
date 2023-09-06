@@ -116,6 +116,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             const auto ext = VideoWriter::getExtension();
             const auto ext_len = VideoWriter::getExtension().size();
             const auto filter = getFilter(message->text);
+            bool any_preview_posted = false;
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (entry.path().extension() == ext) {
                     const auto file_name = entry.path().filename().generic_string();
@@ -124,9 +125,14 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                         const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
                         const auto uid = VideoWriter::getUidFromVideoFileName(file_name);
                         postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
+                        any_preview_posted = true;
                     }
                 }
             }
+            if (any_preview_posted)
+                bot_->getApi().sendMessage(id, "No more previews");
+            else
+                bot_->getApi().sendMessage(id, "No files found");
         }
     });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
