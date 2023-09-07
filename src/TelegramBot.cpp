@@ -78,8 +78,11 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         }
     });
     bot_->getEvents().onCommand("ping", [&](TgBot::Message::Ptr message) { 
-        if (const auto id = message->chat->id; isUserAllowed(id))
-            bot_->getApi().sendMessage(id, "ok");
+        if (const auto id = message->chat->id; isUserAllowed(id)) {
+            const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+            const std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", cur_time);
+            bot_->getApi().sendMessage(id, timestamp);
+        }
     });
     bot_->getEvents().onCommand("videos", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {

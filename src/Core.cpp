@@ -6,7 +6,8 @@
 #include <chrono>
 
 const cv::Scalar frame_color = cv::Scalar(0.0, 0.0, 200.0);
-const int frame_width = 2;
+constexpr int frame_width = 2;
+constexpr size_t max_buffer_size = 500u;
 
 Core::Core(Settings settings)
     : settings_(std::move(settings)),
@@ -130,10 +131,10 @@ void Core::processingThreadFunc() {
                         LogInfo() << "Start cooldown writing";
                         first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();    
                     } else {
-                        LogInfo() << "Cooldown frame saved";
+                        LogTrace() << "Cooldown frame saved";
                         if (isCooldownFinished()) {
                             const auto uid = video_writer_->getUid();
-                            LogInfo() << "Finish writing file with uid = \"" << uid << "\"";
+                            LogInfo() << "Finish writing file with uid = " << uid;
                             const auto preview_file_name = saveVideoPreview(uid);
                             if (settings_.send_video_previews)
                                 postVideoPreview(preview_file_name, uid);
@@ -181,19 +182,21 @@ void Core::captureThreadFunc() {
             }
             buffer_cv_.notify_all();
 
+            // Useful performance debug output
             static uint64_t counter = 0;
             if (counter++ % 300 == 0)
                 LogTrace() << "buffer size = " << buffer_size;
 
-            if (buffer_size % 10 == 0) {
+            if (buffer_size % 10 == 0)
                 LogInfo() << "buffer size = " << buffer_size;
-            }
-            if (buffer_size > 500) {  // Approx 20 sec of 25 fps stream
+            //
+
+            if (buffer_size > max_buffer_size) {  // Approx 20 sec of 25 fps stream
                 if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::Delay) {
-                    LogWarning() << "buffer size > 500, delay capture";
+                    LogWarning() << "buffer size exceeds max, delay capture";
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 } else if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::DropHalf) {
-                    LogWarning() << "buffer size > 500, dropping cache";
+                    LogWarning() << "buffer size exceeds max, dropping cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));

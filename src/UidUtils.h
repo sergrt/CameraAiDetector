@@ -52,7 +52,6 @@ inline std::string getUidFromFileName(const std::string& file_name) {
     if (it == rend(file_name))
         return {};
 
-    auto start = std::distance(it, rend(file_name));
-    std::cout << start << std::endl;
+    const auto start = std::distance(it, rend(file_name));
     return file_name.substr(start, dot_pos - start);
 }

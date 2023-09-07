@@ -30,7 +30,7 @@ VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const Stream
         LogError() << msg;
         throw std::runtime_error(msg);
     }
-    
+    LogInfo() << "Video writer opened file with uid = " << uid_;
     last_frame_time_ = std::chrono::steady_clock::now();
     preview_frames_.reserve(initial_buffer_size);
 }
@@ -71,7 +71,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
     for (int i = 0; i < preview_images; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
-            LogInfo() << "Add row, idx = " << idx;
+            LogTrace() << "Add row, idx = " << idx;
             rows.push_back(preview_frames_[idx]);
         } else {
             auto& row = rows.back();
