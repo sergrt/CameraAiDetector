@@ -12,6 +12,7 @@ public:
 
     FinalAction(const FinalAction&) = delete;
     FinalAction& operator=(const FinalAction&) = delete;
+    FinalAction& operator=(FinalAction&&) = delete;
 
     ~FinalAction() noexcept {
         if (invoke_)

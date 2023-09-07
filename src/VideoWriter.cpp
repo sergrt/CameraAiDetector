@@ -15,8 +15,7 @@ constexpr auto video_file_extension = ".mp4";
 namespace {
 
 cv::Mat createEmptyPreview() {
-    cv::Mat empty;
-    empty = cv::Mat::zeros(cv::Size(350, 80), CV_8UC1);
+    cv::Mat empty = cv::Mat::zeros(cv::Size(350, 80), CV_8UC1);
     cv::putText(empty, "No preview available", cv::Point(20, 50), 0, 0.8, cv::Scalar(255.0, 255.0, 255.0), 1);
     return empty;
 }
@@ -68,7 +67,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
 
     std::vector<cv::Mat> rows;
     const auto images_in_row = static_cast<int>(std::sqrt(preview_images));
-    for (int i = 0; i < preview_images; ++i) {
+    for (size_t i = 0; i < preview_images; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
             LogTrace() << "Add row, idx = " << idx;
@@ -86,7 +85,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
         // cv::vconcat(result, rows[i], result);
     }
 
-    const double scale = 1920 / float(result.cols);  // TODO: Make preview size configurable
+    const double scale = 1920 / static_cast<float>(result.cols);  // TODO: Make preview size configurable
     cv::Mat resized_res;
     cv::resize(result, resized_res, cv::Size(0, 0), scale, scale, cv::INTER_AREA);
     return resized_res;

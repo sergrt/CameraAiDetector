@@ -29,6 +29,11 @@ public:
     TelegramBot(const std::string& token, std::filesystem::path storage_path, std::vector<uint64_t> allowed_users);
     ~TelegramBot();
 
+    TelegramBot(const TelegramBot&) = delete;
+    TelegramBot(TelegramBot&&) = delete;
+    TelegramBot& operator=(const TelegramBot&) = delete;
+    TelegramBot& operator=(TelegramBot&&) = delete;
+
     void start();
     void stop();
 

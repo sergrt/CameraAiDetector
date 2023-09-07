@@ -135,8 +135,7 @@ void Core::processingThreadFunc() {
                         if (isCooldownFinished()) {
                             const auto uid = video_writer_->getUid();
                             LogInfo() << "Finish writing file with uid = " << uid;
-                            const auto preview_file_name = saveVideoPreview(uid);
-                            if (settings_.send_video_previews)
+                            if (const auto preview_file_name = saveVideoPreview(uid); settings_.send_video_previews)
                                 postVideoPreview(preview_file_name, uid);
                             // Stop cooldown
                             video_writer_.reset();

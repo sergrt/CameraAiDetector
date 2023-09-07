@@ -7,7 +7,7 @@
 namespace {
 
 size_t writeCallback(char* contents, size_t size, size_t nmemb, void* userp) {
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    static_cast<std::string*>(userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
 
@@ -60,7 +60,7 @@ nlohmann::json CodeprojectAiFacade::detect(const unsigned char* data, size_t dat
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &read_buffer);
     curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
 
-    CURLcode res = curl_easy_perform(curl_);
+    const CURLcode res = curl_easy_perform(curl_);
     curl_formfree(form);
 
     if (res == CURLE_OK) {

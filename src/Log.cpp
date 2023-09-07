@@ -39,7 +39,7 @@ Log::~Log() {
     }
 }
 
-bool Log::checkLevel() {
+bool Log::checkLevel() const {
     return log_level_ >= app_log_level;
 }
 

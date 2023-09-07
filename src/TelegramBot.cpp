@@ -69,7 +69,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
 
     bot_->getEvents().onCommand("start", [this](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id))
-            bot_->getApi().sendMessage(id, "Use commands from menu");
+            bot_->getApi().sendMessage(id, "Use commands from menu");  // TODO: check result and report error - here and on
     });
     bot_->getEvents().onCommand("image", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
@@ -234,7 +234,7 @@ void TelegramBot::postMessage(uint64_t user_id, const std::string& message) {
 }
 
 void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& video_uid) {
-    const std::string message = TelegramBot::videoCmdPrefix() + video_uid;
+    const std::string message = videoCmdPrefix() + video_uid;
     {
         std::lock_guard lock(queue_mutex_);
         notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, message, file_name);

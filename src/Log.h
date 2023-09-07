@@ -18,6 +18,11 @@ public:
     explicit Log(LogLevel level);
     ~Log();
 
+    Log(const Log&) = delete;
+    Log(Log&&) = delete;
+    Log& operator=(const Log&) = delete;
+    Log& operator=(Log&&) = delete;
+
     template<typename T>
     Log& operator<<(const T& data) {
         if (checkLevel())
@@ -34,7 +39,7 @@ public:
     }
 
 private:
-    bool checkLevel();
+    bool checkLevel() const;
     void logTimestamp();
     void logLevel();
 

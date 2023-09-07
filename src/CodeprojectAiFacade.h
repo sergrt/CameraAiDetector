@@ -10,6 +10,11 @@ public:
     CodeprojectAiFacade(std::string url, std::string min_confidence, const std::string& img_format);
     ~CodeprojectAiFacade();
 
+    CodeprojectAiFacade(const CodeprojectAiFacade&) = delete;
+    CodeprojectAiFacade(CodeprojectAiFacade&&) = delete;
+    CodeprojectAiFacade& operator=(const CodeprojectAiFacade&) = delete;
+    CodeprojectAiFacade& operator=(CodeprojectAiFacade&&) = delete;
+
     nlohmann::json detect(const unsigned char* data, size_t data_size);
 
 private:
