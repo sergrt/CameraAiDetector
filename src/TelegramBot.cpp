@@ -162,7 +162,7 @@ bool TelegramBot::waitingForPhoto() const {
 
 void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients) {
     std::lock_guard lock(photo_mutex_);
-    const auto path = (storage_path_ / file_name);
+    const auto path = storage_path_ / file_name;
     if (!std::filesystem::exists(path)) {  // TODO: Refactor here and on for something like getCheckedFilePath(file_name)
         LogError() << "File " << path << " is missing";
         return;
@@ -175,7 +175,7 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
 }
 
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
-    const auto path = (storage_path_ / file_name);
+    const auto path = storage_path_ / file_name;
     if (!std::filesystem::exists(path)) {
         LogError() << "File " << path << " is missing";
         return;
@@ -193,7 +193,7 @@ void TelegramBot::sendMessage(const std::vector<uint64_t>& recipients, const std
 }
 
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
-    const auto path = (storage_path_ / file_name);
+    const auto path = storage_path_ / file_name;
     if (!std::filesystem::exists(path)) {
         LogError() << "File " << path << " is missing";
         return;

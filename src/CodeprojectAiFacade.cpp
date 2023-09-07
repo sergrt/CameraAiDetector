@@ -7,7 +7,7 @@
 namespace {
 
 size_t writeCallback(char* contents, size_t size, size_t nmemb, void* userp) {
-    static_cast<std::string*>(userp)->append((char*)contents, size * nmemb);
+    static_cast<std::string*>(userp)->append(contents, size * nmemb);
     return size * nmemb;
 }
 
@@ -37,8 +37,8 @@ CodeprojectAiFacade::~CodeprojectAiFacade() {
 nlohmann::json CodeprojectAiFacade::detect(const unsigned char* data, size_t data_size) {
     curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
 
-    struct curl_httppost* form = nullptr;
-    struct curl_httppost* last = nullptr;
+    curl_httppost* form = nullptr;
+    curl_httppost* last = nullptr;
 
     curl_formadd(&form, &last,
         CURLFORM_COPYNAME, "image",
@@ -64,7 +64,7 @@ nlohmann::json CodeprojectAiFacade::detect(const unsigned char* data, size_t dat
     curl_formfree(form);
 
     if (res == CURLE_OK) {
-        LogTrace() << "Detect() ok, result: " << read_buffer;
+        LogTrace() << "detect() ok, result: " << read_buffer;
         return nlohmann::json::parse(read_buffer);
     } else {
         LogError() << "curl_easy_perform() failed: " << curl_easy_strerror(res);
