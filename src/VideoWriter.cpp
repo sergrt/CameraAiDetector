@@ -1,6 +1,6 @@
 #include "VideoWriter.h"
 
-#include "Logger.h"
+#include "Log.h"
 #include "UidUtils.h"
 
 #include <stdexcept>
@@ -27,7 +27,7 @@ VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const Stream
     const auto file_name = generateFileName(video_file_prefix, &uid_) + video_file_extension;
     if (!writer_.open((storage_path / file_name).generic_string(), fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
-        Logger(LL_ERROR) << msg;
+        LogError() << msg;
         throw std::runtime_error(msg);
     }
     
@@ -59,19 +59,19 @@ void VideoWriter::write(const cv::Mat& frame) {
 
 cv::Mat VideoWriter::getPreviewImage() const {
     if (preview_frames_.empty()) {
-        Logger(LL_WARNING) << "Preview frames buffer is empty";
+        LogWarning() << "Preview frames buffer is empty";
         return createEmptyPreview();
     }
 
     const double step = static_cast<double>(preview_frames_.size()) / preview_images;
-    Logger(LL_INFO) << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
+    LogInfo() << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
     const auto images_in_row = static_cast<int>(std::sqrt(preview_images));
     for (int i = 0; i < preview_images; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
-            Logger(LL_INFO) << "Add row, idx = " << idx;
+            LogInfo() << "Add row, idx = " << idx;
             rows.push_back(preview_frames_[idx]);
         } else {
             auto& row = rows.back();

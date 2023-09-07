@@ -1,4 +1,4 @@
-#include "Logger.h"
+#include "Log.h"
 #include "TelegramBot.h"
 #include "UidUtils.h"
 #include "VideoWriter.h"
@@ -123,15 +123,15 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             if (StringTools::startsWith(message->text, videoCmdPrefix())) {
-                Logger(LL_INFO) << "video command received: " << message->text;
+                LogInfo() << "video command received: " << message->text;
                 const std::string uid = message->text.substr(videoCmdPrefix().size());  // uid of file
                 if (!isUidValid(uid)) {
-                    Logger(LL_WARNING) << "User " << id << " asked file with invalid uid: " << uid;
+                    LogWarning() << "User " << id << " asked file with invalid uid: " << uid;
                     bot_->getApi().sendMessage(id, "Invalid file requested");
                     return;
                 }
                 const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
-                Logger(LL_INFO) << "File uid extracted: " << uid << ", full path: " << file_path;
+                LogInfo() << "File uid extracted: " << uid << ", full path: " << file_path;
 
                 if (std::filesystem::exists(file_path)) {
                     bot_->getApi().sendVideo(id, TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4"), false, 0, 0, 0, "", file_path.filename().generic_string());
@@ -140,7 +140,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 }
             }
         } else {
-            Logger(LL_WARNING) << "Unauthorized user tried to access: " << id;
+            LogWarning() << "Unauthorized user tried to access: " << id;
         }
     });
 }
@@ -161,7 +161,7 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
     std::lock_guard lock(photo_mutex_);
     const auto path = (storage_path_ / file_name);
     if (!std::filesystem::exists(path)) {  // TODO: Refactor here and on for something like getCheckedFilePath(file_name)
-        Logger(LL_ERROR) << "File " << path << " is missing";
+        LogError() << "File " << path << " is missing";
         return;
     }
 
@@ -174,7 +174,7 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vec
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
     const auto path = (storage_path_ / file_name);
     if (!std::filesystem::exists(path)) {
-        Logger(LL_ERROR) << "File " << path << " is missing";
+        LogError() << "File " << path << " is missing";
         return;
     }
 
@@ -192,7 +192,7 @@ void TelegramBot::sendMessage(const std::vector<uint64_t>& recipients, const std
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
     const auto path = (storage_path_ / file_name);
     if (!std::filesystem::exists(path)) {
-        Logger(LL_ERROR) << "File " << path << " is missing";
+        LogError() << "File " << path << " is missing";
         return;
     }
 
@@ -249,7 +249,7 @@ void TelegramBot::pollThreadFunc() {
     TgBot::TgLongPoll longPoll(*bot_);
 
     while (!stop_) {
-        Logger(LL_TRACE) << "LongPoll start";
+        LogTrace() << "LongPoll start";
         longPoll.start();
     }
 }
@@ -279,7 +279,7 @@ void TelegramBot::queueThreadFunc() {
 
 void TelegramBot::start() {
     if (!stop_) {
-        Logger(LL_WARNING) << "Attempt start() on already running bot";
+        LogWarning() << "Attempt start() on already running bot";
         return;
     }
 
@@ -290,7 +290,7 @@ void TelegramBot::start() {
 
 void TelegramBot::stop() {
     if (stop_) {
-        Logger(LL_WARNING) << "Attempt stop() on already stopped bot";
+        LogWarning() << "Attempt stop() on already stopped bot";
     }
     stop_ = true;
     queue_cv_.notify_all();

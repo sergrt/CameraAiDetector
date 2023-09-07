@@ -12,10 +12,11 @@ class FrameReader final {
 public:
     explicit FrameReader(std::string source);
 
-    bool getFrame(cv::Mat& frame);
-    StreamProperties getStreamProperties() const;
     bool open();
     bool reconnect();
+
+    bool getFrame(cv::Mat& frame);
+    StreamProperties getStreamProperties() const;
 
 private:
     const std::string source_;

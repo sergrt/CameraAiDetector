@@ -1,6 +1,6 @@
 #include "Core.h"
 #include "FinalAction.h"
-#include "Logger.h"
+#include "Log.h"
 #include "Settings.h"
 
 #include <memory>
@@ -22,7 +22,7 @@ int main() {
 
     auto _ = FinalAction([]() {
         if (app_log_stream != &std::cout) {
-            Logger(LL_INFO) << "Delete file stream";
+            LogTrace() << "Delete file stream";
             delete app_log_stream;
         }
     });

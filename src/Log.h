@@ -13,20 +13,20 @@ enum LogLevel {
 extern LogLevel app_log_level;
 extern std::ostream* app_log_stream;
 
-class Logger final {
+class Log final {
 public:
-    explicit Logger(LogLevel level);
-    ~Logger();
+    explicit Log(LogLevel level);
+    ~Log();
 
     template<typename T>
-    Logger& operator<<(const T& data) {
+    Log& operator<<(const T& data) {
         if (checkLevel())
             stream_ << data;
 
         return *this;
     }
 
-    Logger& operator<<(const bool data) {
+    Log& operator<<(const bool data) {
         if (checkLevel())
             stream_ << (data ? "true" : "false");
 
@@ -38,12 +38,24 @@ private:
     void logTimestamp();
     void logLevel();
 
-    const LogLevel log_level_;
     std::osyncstream stream_;
+    const LogLevel log_level_;    
     bool something_written_ = false;
 };
 
-// TODO: Consider shortcuts, like following:
-// inline Logger LogInfo() {
-//     return Logger(LL_INFO);
-// }
+// Shortcuts, for readability
+inline Log LogTrace() {
+    return Log(LL_TRACE);
+}
+
+inline Log LogInfo() {
+    return Log(LL_INFO);
+}
+
+inline Log LogWarning() {
+    return Log(LL_WARNING);
+}
+
+inline Log LogError() {
+    return Log(LL_ERROR);
+}

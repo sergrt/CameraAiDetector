@@ -49,7 +49,7 @@ set(SOURCE
   CodeprojectAiFacade.cpp
   Core.cpp
   FrameReader.cpp
-  Logger.cpp
+  Log.cpp
   main.cpp
   Settings.cpp
   TelegramBot.cpp
@@ -60,7 +60,7 @@ set(HEADER
   Core.h
   FinalAction.h
   FrameReader.h
-  Logger.h
+  Log.h
   Settings.h
   StreamProperties.h
   TelegramBot.h

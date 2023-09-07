@@ -1,4 +1,4 @@
-#include "Logger.h"
+#include "Log.h"
 
 #include <chrono>
 #include <string>
@@ -20,7 +20,7 @@ std::string logLevelToString(LogLevel log_level) {
 
 }  // namespace
 
-Logger::Logger(LogLevel level)
+Log::Log(LogLevel level)
     : stream_(std::osyncstream(*app_log_stream))
     , log_level_(level) {
     
@@ -32,22 +32,23 @@ Logger::Logger(LogLevel level)
     }
 }
 
-Logger::~Logger() {
+Log::~Log() {
     if (something_written_) {
         // stream_ << std::endl;  // Useful for debug
         stream_ << "\n";
     }
 }
 
-bool Logger::checkLevel() {
+bool Log::checkLevel() {
     return log_level_ >= app_log_level;
 }
 
-void Logger::logTimestamp() {
-    const std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", std::chrono::system_clock::now());
+void Log::logTimestamp() {
+    const auto now = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+    const std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", now);
     stream_ << timestamp << " ";
 }
 
-void Logger::logLevel() {
+void Log::logLevel() {
     stream_ << logLevelToString(log_level_) << " ";
 }

@@ -1,6 +1,6 @@
 #include "Core.h"
 
-#include "Logger.h"
+#include "Log.h"
 #include "UidUtils.h"
 
 #include <chrono>
@@ -29,7 +29,7 @@ void Core::postOnDemandPhoto(const cv::Mat& frame) {
 }
 
 void Core::initVideoWriter() {
-    Logger(LL_INFO) << "Init video writer";
+    LogInfo() << "Init video writer";
     const auto stream_properties = frame_reader_.getStreamProperties();
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, stream_properties);
 }
@@ -86,7 +86,7 @@ void Core::processingThreadFunc() {
 
         if (!check_frame) {
             if (video_writer_) {
-                Logger(LL_TRACE) << "Detect not called, just write";
+                LogTrace() << "Detect not called, just write";
                 video_writer_->write(frame);
             }
         }
@@ -99,15 +99,15 @@ void Core::processingThreadFunc() {
                 cv::resize(frame, scaled_frame, scaled_size);
 
             if (!cv::imencode(img_format, (settings_.use_image_scale ? scaled_frame : frame), img_buffer, img_encode_param)) {
-                Logger(LL_TRACE) << "Frame encoding failed";
+                LogTrace() << "Frame encoding failed";
                 continue;
             }
-            const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
-            Logger(LL_TRACE) << "Detect result: " << detect_result;
+            const auto detect_result = ai_facade_.detect(img_buffer.data(), img_buffer.size());
+            LogTrace() << "Detect result: " << detect_result;
 
             if (!detect_result.empty() && detect_result["success"] == true && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
-                    Logger(LL_INFO) << "Cooldown stopped - object detected";
+                    LogInfo() << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
                 }
 
@@ -126,13 +126,13 @@ void Core::processingThreadFunc() {
                     video_writer_->write(frame);
 
                     if (!first_cooldown_frame_timestamp_) {
-                        Logger(LL_INFO) << "Start cooldown writing";
+                        LogInfo() << "Start cooldown writing";
                         first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();    
                     } else {
-                        Logger(LL_INFO) << "Cooldown frame saved";
+                        LogInfo() << "Cooldown frame saved";
                         if (isCooldownFinished()) {
                             const auto uid = video_writer_->getUid();
-                            Logger(LL_INFO) << "Finish writing file with uid = \"" << uid << "\"";
+                            LogInfo() << "Finish writing file with uid = \"" << uid << "\"";
                             const auto preview_file_name = saveVideoPreview(uid);
                             if (settings_.send_video_previews)
                                 postVideoPreview(preview_file_name, uid);
@@ -160,14 +160,14 @@ void Core::captureThreadFunc() {
         cv::Mat frame;
         if (!frame_reader_.getFrame(frame)) {
             ++get_frame_error_count_;
-            Logger(LogLevel::LL_ERROR) << "Can't get frame";
+            LogError() << "Can't get frame";
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
-                Logger(LL_INFO) << "Reconnect";
+                LogInfo() << "Reconnect";
                 get_frame_error_count_ = 0;
                 frame_reader_.reconnect();
             } else {
-                Logger(LL_INFO) << "Error delay, count = " << get_frame_error_count_;
+                LogInfo() << "Error delay, count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
             }
         } else {
@@ -182,17 +182,17 @@ void Core::captureThreadFunc() {
 
             static uint64_t counter = 0;
             if (counter++ % 300 == 0)
-                Logger(LL_TRACE) << "buffer size = " << buffer_size;
+                LogTrace() << "buffer size = " << buffer_size;
 
             if (buffer_size % 10 == 0) {
-                Logger(LL_INFO) << "buffer size = " << buffer_size;
+                LogInfo() << "buffer size = " << buffer_size;
             }
             if (buffer_size > 500) {  // Approx 20 sec of 25 fps stream
                 if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::Delay) {
-                    Logger(LL_WARNING) << "buffer size > 500, delay capture";
+                    LogWarning() << "buffer size > 500, delay capture";
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 } else if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::DropHalf) {
-                    Logger(LL_WARNING) << "buffer size > 500, dropping cache";
+                    LogWarning() << "buffer size > 500, dropping cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));
@@ -206,7 +206,7 @@ void Core::captureThreadFunc() {
 
 void Core::start() {
     if (!stop_) {
-        Logger(LL_WARNING) << "Attempt start() on already running core";
+        LogWarning() << "Attempt start() on already running core";
         return;
     }
 
@@ -218,7 +218,7 @@ void Core::start() {
 
 void Core::stop() {
     if (stop_) {
-        Logger(LL_WARNING) << "Attempt stop() on already stopped core";
+        LogWarning() << "Attempt stop() on already stopped core";
     }
     stop_ = true;
     buffer_cv_.notify_all();

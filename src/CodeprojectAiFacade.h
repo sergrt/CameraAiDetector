@@ -10,7 +10,7 @@ public:
     CodeprojectAiFacade(std::string url, std::string min_confidence, const std::string& img_format);
     ~CodeprojectAiFacade();
 
-    nlohmann::json Detect(const unsigned char* data, size_t data_size);
+    nlohmann::json detect(const unsigned char* data, size_t data_size);
 
 private:
     const std::string url_;

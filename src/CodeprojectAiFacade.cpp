@@ -1,12 +1,12 @@
 #include "CodeprojectAiFacade.h"
 
-#include "Logger.h"
+#include "Log.h"
 
 #include <stdexcept>
 
 namespace {
 
-size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* userp) {
+size_t writeCallback(char* contents, size_t size, size_t nmemb, void* userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
@@ -22,7 +22,7 @@ CodeprojectAiFacade::CodeprojectAiFacade(std::string url, std::string min_confid
     curl_ = curl_easy_init();
 
     if (!curl_) {
-        Logger(LL_ERROR) << "curl init failed";
+        LogError() << "curl init failed";
         throw std::runtime_error("curl init failed");
     }
 }
@@ -34,7 +34,7 @@ CodeprojectAiFacade::~CodeprojectAiFacade() {
     curl_global_cleanup();
 }
 
-nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t data_size) {
+nlohmann::json CodeprojectAiFacade::detect(const unsigned char* data, size_t data_size) {
     curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
 
     struct curl_httppost* form = nullptr;
@@ -58,16 +58,16 @@ nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t dat
 
     std::string read_buffer;
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &read_buffer);
-    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
 
     CURLcode res = curl_easy_perform(curl_);
     curl_formfree(form);
 
     if (res == CURLE_OK) {
-        Logger(LL_TRACE) << "Detect() ok, result: " << read_buffer;
+        LogTrace() << "Detect() ok, result: " << read_buffer;
         return nlohmann::json::parse(read_buffer);
     } else {
-        Logger(LL_ERROR) << "curl_easy_perform() failed: " << curl_easy_strerror(res);
+        LogError() << "curl_easy_perform() failed: " << curl_easy_strerror(res);
     }
 
     return {};

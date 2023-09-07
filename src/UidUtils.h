@@ -8,7 +8,7 @@
 
 // UID is a timestamp
 inline std::string generateUid() {
-    const std::chrono::zoned_time cur_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
     std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", cur_time);
     timestamp.replace(timestamp.find('.'), 1, "_");
     return timestamp;
