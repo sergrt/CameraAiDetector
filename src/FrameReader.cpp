@@ -24,7 +24,7 @@ bool FrameReader::reconnect() {
 bool FrameReader::getFrame(cv::Mat& frame) {
     // TODO: check capture_->isOpened() ? Consider performance - this function is called from tight loop
     const auto res = capture_->read(frame);
-    (res ? LogInfo() : LogError()) << "FrameReader::getFrame() result: " << res;
+    (res ? LogTrace() : LogError()) << "FrameReader::getFrame() result: " << res;
     return res;
 }
 

@@ -49,6 +49,7 @@ private:
 
     std::optional<std::chrono::time_point<std::chrono::steady_clock>> first_cooldown_frame_timestamp_;
     std::chrono::time_point<std::chrono::steady_clock> last_alarm_photo_sent_ = std::chrono::steady_clock::now() - std::chrono::hours(100);  // std::chrono::time_point<std::chrono::steady_clock>::max();
+    std::string last_alarm_video_uid_;
 
     std::deque<cv::Mat> buffer_;
     std::mutex buffer_mutex_;

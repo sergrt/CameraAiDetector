@@ -115,11 +115,12 @@ void Core::processingThreadFunc() {
                     initVideoWriter();
 
                 video_writer_->write(frame);
-
-                if (isAlarmImageDelayPassed()) {
+                const auto video_uid = video_writer_->getUid();
+                if (video_uid != last_alarm_video_uid_ || isAlarmImageDelayPassed()) {
                     auto& alarm_frame = (settings_.use_image_scale ? scaled_frame : frame);
                     drawBoxes(alarm_frame, detect_result["predictions"]);
                     postAlarmPhoto(alarm_frame);
+                    last_alarm_video_uid_ = video_uid;
                 }
             } else {  // Not detected
                 if (video_writer_) {
