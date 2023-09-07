@@ -3,7 +3,6 @@
 #include "Logger.h"
 
 #include <stdexcept>
-#include <string>
 
 namespace {
 
@@ -14,7 +13,7 @@ size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* userp) {
 
 }  // namespace
 
-CodeprojectAiFacade::CodeprojectAiFacade(std::string url, std::string min_confidence, std::string img_format)
+CodeprojectAiFacade::CodeprojectAiFacade(std::string url, std::string min_confidence, const std::string& img_format)
     : url_(std::move(url))
     , min_confidence_(std::move(min_confidence))
     , img_mime_type_("image/" + img_format) {

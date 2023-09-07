@@ -35,7 +35,7 @@ public:
     // Post to sending queue
     void postOnDemandPhoto(const std::string& file_name);
     void postAlarmPhoto(const std::string& file_name);
-    void postMessage(const std::string& message);
+    void postMessage(uint64_t user_id, const std::string& message);
     void postVideoPreview(const std::string& file_name, const std::string& video_uid);
     
     bool waitingForPhoto() const;
@@ -46,7 +46,7 @@ private:
     // Actual sending
     void sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients);
     void sendAlarmPhoto(const std::string& file_name);
-    void sendMessage(const std::string& message);
+    void sendMessage(const std::vector<uint64_t>& recipients, const std::string& message);
     void sendVideoPreview(const std::string& file_name, const std::string& message);
 
     bool isUserAllowed(uint64_t user_id) const;

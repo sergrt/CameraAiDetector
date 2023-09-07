@@ -15,23 +15,10 @@ std::string to_upper(const std::string& str) {
     return upper_str;
 }
 
-bool isFilenameSafe(const std::string& file_name) {
-    static constexpr auto reserved_filenames = {"CLOCK$", "AUX",  "CON",  "NUL",  "PRN",  "COM1", "COM2", "COM3",
-                                                "COM4",   "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
-                                                "LPT3",   "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
-
-    auto found = std::any_of(begin(reserved_filenames), end(reserved_filenames),
-                             [upper_name = to_upper(file_name)](const auto& name) { return name == upper_name; });
-
-    if (found)
-        return false;
-
-    found = std::any_of(begin(file_name), end(file_name), [](const auto& c) {
-        static const auto forbidden_chars = {'/', '?', '<', '>', ':', '.', '\\', '!', '@', '%', '^', '*', '~', '|', '\"'};
-        return std::find(cbegin(forbidden_chars), cend(forbidden_chars), c) != cend(forbidden_chars);
-    });
-
-    return !found;
+bool isUidValid(const std::string& uid) {
+    static const auto uid_regex = std::regex(R"(^20[2|3]\d(0[1-9]|1[012])(0[1-9]|[12][0-9]|3[01])T(2[0-3]|[01][0-9])[0-5][0-9][0-5][0-9]_\d{7}$)");
+    std::smatch match;
+    return std::regex_match(uid, match, uid_regex);
 }
 
 struct Filter {
@@ -48,9 +35,13 @@ std::optional<Filter> getFilter(const std::string& text) {
     std::smatch match;
     if (std::regex_match(text, match, filter_regex)) {
         const auto period = to_upper(match[2]);
-        const auto count = std::atoi(std::string(match[1]).c_str());
 
-        Filter filter;
+        const auto count = std::strtol(match[1].str().c_str(), nullptr, 10);
+        if (count == 0 || errno == ERANGE) {
+            return {};
+        }
+
+        Filter filter{};
         if (period == "M") {
             filter.depth = std::chrono::minutes(count);
         } else if (period == "H") {
@@ -64,8 +55,8 @@ std::optional<Filter> getFilter(const std::string& text) {
     return {};
 }
 
-bool applyFilter(const Filter& filter, const std::string file_name) {    
-    const auto uid = VideoWriter::getUidFromVideoFileName(file_name);
+bool applyFilter(const Filter& filter, const std::string& file_name) {
+    const auto uid = getUidFromFileName(file_name);
     return std::chrono::system_clock::now() - getTimestampFromUid(uid) < filter.depth;
 }
 
@@ -92,45 +83,39 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     });
     bot_->getEvents().onCommand("videos", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
-            std::string files_list;
-            const auto ext = VideoWriter::getExtension();
-            const auto ext_len = VideoWriter::getExtension().size();
+            std::string commands_list;
             const auto filter = getFilter(message->text);
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
-                if (entry.path().extension() == ext) {
+                if (VideoWriter::isVideoFile(entry.path())) {
                     const auto file_name = entry.path().filename().generic_string();
                     if (!filter || applyFilter(*filter, file_name)) {
                         const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                        files_list += videoCmdPrefix() + VideoWriter::getUidFromVideoFileName(file_name) + "    " + std::to_string(file_size) + " MB\n";
+                        commands_list += videoCmdPrefix() + getUidFromFileName(file_name) + "    " + std::to_string(file_size) + " MB\n";
                     }
                 }
             }
-            if (!files_list.empty())
-                bot_->getApi().sendMessage(id, files_list);
+            if (!commands_list.empty())
+                bot_->getApi().sendMessage(id, commands_list);
             else
                 bot_->getApi().sendMessage(id, "No files found");
         }
     });
     bot_->getEvents().onCommand("previews", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
-            const auto ext = VideoWriter::getExtension();
-            const auto ext_len = VideoWriter::getExtension().size();
             const auto filter = getFilter(message->text);
             bool any_preview_posted = false;
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
-                if (entry.path().extension() == ext) {
+                if (VideoWriter::isVideoFile(entry.path())) {
                     const auto file_name = entry.path().filename().generic_string();
                     if (!filter || applyFilter(*filter, file_name)) {
-                        const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                        const auto caption = videoCmdPrefix() + file_name.substr(0, file_name.size() - ext_len) + "    " + std::to_string(file_size) + " MB\n";
-                        const auto uid = VideoWriter::getUidFromVideoFileName(file_name);
+                        const auto uid = getUidFromFileName(file_name);
                         postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
                         any_preview_posted = true;
                     }
                 }
             }
             if (any_preview_posted)
-                bot_->getApi().sendMessage(id, "No more previews");
+                postMessage(id, "Completed");
             else
                 bot_->getApi().sendMessage(id, "No files found");
         }
@@ -139,14 +124,14 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             if (StringTools::startsWith(message->text, videoCmdPrefix())) {
                 Logger(LL_INFO) << "video command received: " << message->text;
-                const std::string file_name = message->text.substr(videoCmdPrefix().size());  // Without extension - id of file
-                if (!isFilenameSafe(file_name)) {
-                    Logger(LL_WARNING) << "User " << id << " asked suspicious filename: " << file_name;
-                    bot_->getApi().sendMessage(id, "Invalid file specified");
+                const std::string uid = message->text.substr(videoCmdPrefix().size());  // uid of file
+                if (!isUidValid(uid)) {
+                    Logger(LL_WARNING) << "User " << id << " asked file with invalid uid: " << uid;
+                    bot_->getApi().sendMessage(id, "Invalid file requested");
                     return;
                 }
-                const std::filesystem::path file_path = storage_path_ / (VideoWriter::getVideoFilePrefix() + file_name + VideoWriter::getExtension());
-                Logger(LL_INFO) << "Filename extracted: " << file_name << ", full path: " << file_path;
+                const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
+                Logger(LL_INFO) << "File uid extracted: " << uid << ", full path: " << file_path;
 
                 if (std::filesystem::exists(file_path)) {
                     bot_->getApi().sendVideo(id, TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4"), false, 0, 0, 0, "", file_path.filename().generic_string());
@@ -198,8 +183,8 @@ void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
     }
 }
 
-void TelegramBot::sendMessage(const std::string& message) {
-    for (const auto& user : allowed_users_) {
+void TelegramBot::sendMessage(const std::vector<uint64_t>& recipients, const std::string& message) {
+    for (const auto& user : recipients) {
         bot_->getApi().sendMessage(user, message);
     }
 }
@@ -237,10 +222,10 @@ void TelegramBot::postAlarmPhoto(const std::string& file_name) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::postMessage(const std::string& message) {
+void TelegramBot::postMessage(uint64_t user_id, const std::string& message) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::MESSAGE, message, "");
+        notification_queue_.emplace_back(NotificationQueueItem::Type::MESSAGE, message, "", std::vector<uint64_t>{ user_id });
     }
     queue_cv_.notify_one();
 }
@@ -281,7 +266,7 @@ void TelegramBot::queueThreadFunc() {
         lock.unlock();
 
         if (item.type == NotificationQueueItem::Type::MESSAGE) {
-            sendMessage(item.message);
+            sendMessage(item.recipients, item.message);
         } else if (item.type == NotificationQueueItem::Type::ON_DEMAND_PHOTO) {
             sendOnDemandPhoto(item.file_name, item.recipients);
         } else if (item.type == NotificationQueueItem::Type::ALARM_PHOTO) {

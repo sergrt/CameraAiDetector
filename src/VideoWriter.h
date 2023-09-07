@@ -17,10 +17,9 @@ public:
     std::string getUid() const;
     cv::Mat getPreviewImage() const;
 
-    static std::string getExtension();
+    static bool isVideoFile(const std::filesystem::path& file);
     static std::string generatePreviewFileName(const std::string& uid);
-    static std::string getUidFromVideoFileName(const std::string& file_name);
-    static std::string getVideoFilePrefix();
+    static std::string generateVideoFileName(const std::string& uid);
 
 private:
     cv::VideoWriter writer_;
