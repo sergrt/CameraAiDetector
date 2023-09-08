@@ -57,7 +57,7 @@ inline std::string getUidFromFileName(const std::string& file_name) {
     return file_name.substr(start, dot_pos - start);
 }
 
-bool isUidValid(const std::string& uid) {
+inline bool isUidValid(const std::string& uid) {
     static const auto uid_regex = std::regex(R"(^20[2|3]\d(0[1-9]|1[012])(0[1-9]|[12][0-9]|3[01])T(2[0-3]|[01][0-9])[0-5][0-9][0-5][0-9]_\d{7}$)");
     std::smatch match;
     return std::regex_match(uid, match, uid_regex);
