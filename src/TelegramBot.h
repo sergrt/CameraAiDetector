@@ -42,8 +42,8 @@ public:
     void postAlarmPhoto(const std::string& file_name);
     void postMessage(uint64_t user_id, const std::string& message);
     void postVideoPreview(const std::string& file_name, const std::string& video_uid);
-    
-    bool waitingForPhoto() const;
+
+    bool someoneIswaitingForPhoto() const;
 
     static std::string videoCmdPrefix();
 

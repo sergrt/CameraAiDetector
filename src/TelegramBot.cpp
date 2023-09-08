@@ -130,11 +130,10 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
                 LogInfo() << "File uid extracted: " << uid << ", full path: " << file_path;
 
-                if (std::filesystem::exists(file_path)) {
+                if (std::filesystem::exists(file_path))
                     bot_->getApi().sendVideo(id, TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4"), false, 0, 0, 0, "", file_path.filename().generic_string());
-                } else {
+                else
                     bot_->getApi().sendMessage(id, "Invalid file specified");
-                }
             }
         } else {
             LogWarning() << "Unauthorized user tried to access: " << id;
@@ -150,7 +149,7 @@ bool TelegramBot::isUserAllowed(uint64_t user_id) const {
     return std::find(cbegin(allowed_users_), cend(allowed_users_), user_id) != cend(allowed_users_);
 }
 
-bool TelegramBot::waitingForPhoto() const {
+bool TelegramBot::someoneIswaitingForPhoto() const {
     return !users_waiting_for_photo_.empty();
 }
 

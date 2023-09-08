@@ -79,7 +79,7 @@ void Core::processingThreadFunc() {
         buffer_.pop_front();
         lock.unlock();
 
-        if (bot_.waitingForPhoto())
+        if (bot_.someoneIswaitingForPhoto())
             postOnDemandPhoto(frame);
 
         static uint64_t i = 0;
