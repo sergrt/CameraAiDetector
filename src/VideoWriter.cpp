@@ -48,7 +48,7 @@ std::string VideoWriter::generateVideoFileName(const std::string& uid) {
 
 void VideoWriter::write(const cv::Mat& frame) {
     writer_.write(frame);
-    
+
     if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_time) {
         last_frame_time_ = cur_time;
         preview_frames_.push_back(frame);
@@ -77,7 +77,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
             cv::hconcat(row, preview_frames_[idx], row);
         }
     }
-    
+
     cv::Mat result = rows[0];
     for (size_t i = 1; i < rows.size(); ++i) {
         if (rows[i].cols == result.cols)

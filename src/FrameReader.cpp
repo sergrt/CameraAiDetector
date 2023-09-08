@@ -35,13 +35,13 @@ StreamProperties FrameReader::getStreamProperties() const {
     LogInfo() << "Fill stream properties";
 
     stream_properties_ = StreamProperties();
-    
+
     stream_properties_->fps = capture_->get(cv::CAP_PROP_FPS);
     LogInfo() << "Obtained stream FPS: " << stream_properties_->fps;
-    
+
     stream_properties_->width = static_cast<int>(capture_->get(cv::CAP_PROP_FRAME_WIDTH));
     LogInfo() << "Obtained stream frame width: " << stream_properties_->width;
-    
+
     stream_properties_->height = static_cast<int>(capture_->get(cv::CAP_PROP_FRAME_HEIGHT));
     LogInfo() << "Obtained stream frame height: " << stream_properties_->height;
 
