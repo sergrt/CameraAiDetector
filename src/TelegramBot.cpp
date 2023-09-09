@@ -207,7 +207,7 @@ void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::s
     }
 }
 
-void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
+void TelegramBot::sendVideoPreview(const std::string& file_name) {
     if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
         const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
         const auto caption = path.filename().generic_string();
@@ -244,10 +244,9 @@ void TelegramBot::postMessage(uint64_t user_id, const std::string& message) {
 }
 
 void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& video_uid) {
-    const std::string message = videoCmdPrefix() + video_uid;
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, message, file_name);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, "", file_name);
     }
     queue_cv_.notify_one();
 }
@@ -287,7 +286,7 @@ void TelegramBot::queueThreadFunc() {
         } else if (item.type == NotificationQueueItem::Type::ALARM_PHOTO) {
             sendAlarmPhoto(item.file_name);
         } else if (item.type == NotificationQueueItem::Type::PREVIEW) {
-            sendVideoPreview(item.file_name, item.message);
+            sendVideoPreview(item.file_name);
         }
     }
 }

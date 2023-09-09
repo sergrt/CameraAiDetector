@@ -53,7 +53,7 @@ private:
     void sendOnDemandPhoto(const std::string& file_name);
     void sendAlarmPhoto(const std::string& file_name);
     void sendMessage(const std::set<uint64_t>& recipients, const std::string& message);
-    void sendVideoPreview(const std::string& file_name, const std::string& message);
+    void sendVideoPreview(const std::string& file_name);
 
     bool isUserAllowed(uint64_t user_id) const;
     bool getCheckedFileFullPath(const std::string& file_name, std::filesystem::path& path) const;
