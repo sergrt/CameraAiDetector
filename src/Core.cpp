@@ -54,7 +54,7 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
 }
 
 std::string Core::saveVideoPreview(const std::string& video_file_uid) {
-    const auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
+    auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, video_writer_->getPreviewImage(), img_encode_param))

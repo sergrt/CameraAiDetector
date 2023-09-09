@@ -20,7 +20,7 @@ int main() {
         app_log_stream = new std::ofstream(settings.log_filename);
     }
 
-    auto _ = FinalAction([]() {
+    auto _ = FinalAction([] {
         if (app_log_stream != &std::cout) {
             LogTrace() << "Delete file stream";
             delete app_log_stream;

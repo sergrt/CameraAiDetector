@@ -188,8 +188,7 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name) {
 }
 
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
-    std::filesystem::path path;
-    if (getCheckedFileFullPath(file_name, path)) {
+    if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
         const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
         const auto caption = path.filename().generic_string();
         for (const auto& user : allowed_users_) {
@@ -209,8 +208,7 @@ void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::s
 }
 
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
-    std::filesystem::path path;
-    if (getCheckedFileFullPath(file_name, path)) {
+    if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
         const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
         const auto caption = path.filename().generic_string();
         for (const auto& user : allowed_users_) {
@@ -278,7 +276,7 @@ void TelegramBot::queueThreadFunc() {
         if (stop_)
             break;
 
-        const NotificationQueueItem item = notification_queue_.front();
+        const auto item = notification_queue_.front();
         notification_queue_.pop_front();
         lock.unlock();
 
