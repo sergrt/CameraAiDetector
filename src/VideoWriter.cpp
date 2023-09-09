@@ -87,7 +87,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
 
     const double scale = 1920 / static_cast<float>(result.cols);  // TODO: Make preview size configurable
     cv::Mat resized_res;
-    cv::resize(result, resized_res, cv::Size(0, 0), scale, scale, cv::INTER_LANCZOS4);  // TODO: try cv::INTER_AREA
+    cv::resize(result, resized_res, cv::Size(0, 0), scale, scale, cv::INTER_AREA);
     return resized_res;
 }
 

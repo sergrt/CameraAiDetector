@@ -7,7 +7,8 @@
 
 const cv::Scalar frame_color = cv::Scalar(0.0, 0.0, 200.0);
 constexpr int frame_width = 2;
-constexpr size_t max_buffer_size = 500u;
+constexpr size_t max_buffer_size = 500u;  // Approx 20 sec of 25 fps stream
+constexpr auto buffer_overflow_delay = std::chrono::seconds(1);
 
 Core::Core(Settings settings)
     : settings_(std::move(settings)),
@@ -25,7 +26,9 @@ Core::~Core() {
 
 void Core::postOnDemandPhoto(const cv::Mat& frame) {
     const auto file_name = generateFileName("on_demand_") + ".jpg";
-    cv::imwrite((settings_.storage_path / file_name).generic_string(), frame);
+    const auto path = (settings_.storage_path / file_name).generic_string();
+    if (!cv::imwrite(path, frame))
+        LogError() << "Error write on-demand photo, path = " << path;
     bot_.postOnDemandPhoto(file_name);
 }
 
@@ -38,7 +41,9 @@ void Core::initVideoWriter() {
 void Core::postAlarmPhoto(const cv::Mat& frame) {
     last_alarm_photo_sent_ = std::chrono::steady_clock::now();
     const auto file_name = generateFileName("alarm_") + ".jpg";
-    cv::imwrite((settings_.storage_path / file_name).generic_string(), frame);
+    const auto path = (settings_.storage_path / file_name).generic_string();
+    if (!cv::imwrite(path, frame))
+        LogError() << "Error write alarm photo, path = " << path;
     bot_.postAlarmPhoto(file_name);
 } 
 
@@ -50,7 +55,10 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
 
 std::string Core::saveVideoPreview(const std::string& video_file_uid) {
     const auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
-    cv::imwrite((settings_.storage_path / file_name).generic_string(), video_writer_->getPreviewImage());
+    const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
+    const auto path = (settings_.storage_path / file_name).generic_string();
+    if (!cv::imwrite(path, video_writer_->getPreviewImage(), img_encode_param))
+        LogError() << "Error write video preview image, path = " << path;
     return file_name;
 }
 
@@ -168,7 +176,7 @@ void Core::captureThreadFunc() {
                 get_frame_error_count_ = 0;
                 frame_reader_.reconnect();
             } else {
-                LogInfo() << "Error delay, count = " << get_frame_error_count_;
+                LogInfo() << "Delay after error, error count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
             }
         } else {
@@ -182,20 +190,18 @@ void Core::captureThreadFunc() {
             buffer_cv_.notify_all();
 
             // Useful performance debug output
-            static uint64_t counter = 0;
-            if (counter++ % 300 == 0)
-                LogDebug() << "buffer size = " << buffer_size;
+            static auto debug_buffer_out_time = std::chrono::steady_clock::now();
+            if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(10)) {
+                LogDebug() << "Current buffer size = " << buffer_size;
+                debug_buffer_out_time = now;
+            }
 
-            if (buffer_size % 10 == 0)
-                LogDebug() << "buffer size = " << buffer_size;
-            //
-
-            if (buffer_size > max_buffer_size) {  // Approx 20 sec of 25 fps stream
+            if (buffer_size > max_buffer_size) {
                 if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::Delay) {
-                    LogWarning() << "buffer size exceeds max, delay capture";
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    LogWarning() << "Buffer size exceeds max (" << max_buffer_size << "), delay capture";
+                    std::this_thread::sleep_for(buffer_overflow_delay);
                 } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::DropHalf) {
-                    LogWarning() << "buffer size exceeds max, dropping cache";
+                    LogWarning() << "Buffer size exceeds max (" << max_buffer_size << "), dropping half of cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));
