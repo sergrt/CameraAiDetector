@@ -1,8 +1,15 @@
 #pragma once
 
+#include "Log.h"
+
 #include <filesystem>
+#include <set>
 #include <string>
-#include <vector>
+
+enum class BufferOverflowStrategy {
+    Delay,  // Delay if buffer size is too big. Useful with media files
+    DropHalf  // Drop half of buffer
+};
 
 struct Settings {
     // General settings
@@ -12,10 +19,7 @@ struct Settings {
     size_t delay_after_error_ms = 2'000;  // Delay after frame obtain error
     size_t cooldown_write_time_ms = 5'000;  // Time to write after object became not detected - align this with telegram alarm notification
 
-    enum class BufferOverflowStrategy {
-        Delay,
-        DropHalf
-    };
+    
     BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::Delay;
 
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
@@ -28,12 +32,12 @@ struct Settings {
     
     // Telegram bot preferences
     std::string bot_token;  // Keep this in secret
-    std::vector<uint64_t> allowed_users; // allowed users
+    std::set<uint64_t> allowed_users;  // allowed users
     size_t alarm_notification_delay_ms = 20'000;  // Delay before next telegram alarm
     bool send_video_previews = true;  // Send video preview as soon as video has been recorded
 
     // Log options
-    int log_severity = 1;
+    int log_level = LogLevel::LL_INFO;  // Log level
     std::string log_filename = "debug.log";  // empty string for cout
 };
 

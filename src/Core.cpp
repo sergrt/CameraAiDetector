@@ -100,7 +100,7 @@ void Core::processingThreadFunc() {
                 cv::resize(frame, scaled_frame, scaled_size);
 
             if (!cv::imencode(img_format, (settings_.use_image_scale ? scaled_frame : frame), img_buffer, img_encode_param)) {
-                LogTrace() << "Frame encoding failed";
+                LogError() << "Frame encoding failed";
                 continue;
             }
             const auto detect_result = ai_facade_.detect(img_buffer.data(), img_buffer.size());
@@ -184,17 +184,17 @@ void Core::captureThreadFunc() {
             // Useful performance debug output
             static uint64_t counter = 0;
             if (counter++ % 300 == 0)
-                LogTrace() << "buffer size = " << buffer_size;
+                LogDebug() << "buffer size = " << buffer_size;
 
             if (buffer_size % 10 == 0)
-                LogInfo() << "buffer size = " << buffer_size;
+                LogDebug() << "buffer size = " << buffer_size;
             //
 
             if (buffer_size > max_buffer_size) {  // Approx 20 sec of 25 fps stream
-                if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::Delay) {
+                if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::Delay) {
                     LogWarning() << "buffer size exceeds max, delay capture";
                     std::this_thread::sleep_for(std::chrono::seconds(1));
-                } else if (settings_.buffer_overflow_strategy == Settings::BufferOverflowStrategy::DropHalf) {
+                } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::DropHalf) {
                     LogWarning() << "buffer size exceeds max, dropping cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
@@ -209,7 +209,7 @@ void Core::captureThreadFunc() {
 
 void Core::start() {
     if (!stop_) {
-        LogWarning() << "Attempt start() on already running core";
+        LogInfo() << "Attempt start() on already running core";
         return;
     }
 
@@ -221,7 +221,7 @@ void Core::start() {
 
 void Core::stop() {
     if (stop_) {
-        LogWarning() << "Attempt stop() on already stopped core";
+        LogInfo() << "Attempt stop() on already stopped core";
     }
     stop_ = true;
     buffer_cv_.notify_all();

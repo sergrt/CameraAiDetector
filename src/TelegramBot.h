@@ -6,6 +6,7 @@
 #include <deque>
 #include <filesystem>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 
@@ -21,12 +22,12 @@ struct NotificationQueueItem {
     Type type;
     std::string message;
     std::string file_name;
-    std::vector<uint64_t> recipients;
+    std::set<uint64_t> recipients;
 };
 
 class TelegramBot final {
 public:
-    TelegramBot(const std::string& token, std::filesystem::path storage_path, std::vector<uint64_t> allowed_users);
+    TelegramBot(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users);
     ~TelegramBot();
 
     TelegramBot(const TelegramBot&) = delete;
@@ -49,24 +50,25 @@ public:
 
 private:
     // Actual sending
-    void sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients);
+    void sendOnDemandPhoto(const std::string& file_name);
     void sendAlarmPhoto(const std::string& file_name);
-    void sendMessage(const std::vector<uint64_t>& recipients, const std::string& message);
+    void sendMessage(const std::set<uint64_t>& recipients, const std::string& message);
     void sendVideoPreview(const std::string& file_name, const std::string& message);
 
     bool isUserAllowed(uint64_t user_id) const;
+    bool getCheckedFileFullPath(const std::string& file_name, std::filesystem::path& path) const;
 
     void pollThreadFunc();
     void queueThreadFunc();
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;
-    std::vector<uint64_t> allowed_users_;
+    std::set<uint64_t> allowed_users_;
 
     std::jthread poll_thread_;
     std::atomic_bool stop_ = true;
 
-    std::vector<uint64_t> users_waiting_for_photo_;
+    std::set<uint64_t> users_waiting_for_photo_;
     std::mutex photo_mutex_;
 
     std::deque<NotificationQueueItem> notification_queue_;

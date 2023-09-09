@@ -4,7 +4,7 @@
     "errors_before_reconnect" : 5,
     "delay_after_error_ms" : 2000,
     "cooldown_write_time_ms" : 5000,
-    "buffer_overflow_strategy" : 0,
+    "buffer_overflow_strategy" : "delay",
 
     "codeproject_ai_url" : "http://localhost:32168/v1/vision/custom/ipcam-general",
     "min_confidence" : 0.4,
@@ -17,11 +17,11 @@
     "bot_token" : "TOKEN",
     "allowed_users" : [
         900000000,
-		900000001
+        900000001
     ],
     "alarm_notification_delay_ms" : 30000,
-	"send_video_previews" : true,
+    "send_video_previews" : true,
 
-    "log_severity" : 1,
+    "log_level" : "info",
     "log_filename" : ""
 }

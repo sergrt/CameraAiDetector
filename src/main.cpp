@@ -13,7 +13,7 @@ int main() {
 
     const Settings settings = loadSettings();
 
-    app_log_level = static_cast<LogLevel>(settings.log_severity);
+    app_log_level = static_cast<LogLevel>(settings.log_level);
     if (settings.log_filename.empty()) {
         app_log_stream = &std::cout;
     } else {

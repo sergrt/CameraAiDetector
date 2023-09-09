@@ -5,10 +5,13 @@
 enum LogLevel {
     // Prefixes because of names clash on Windows
     LL_TRACE,
+    LL_DEBUG,
     LL_INFO,
     LL_WARNING,
     LL_ERROR
 };
+
+LogLevel stringToLogLevel(const std::string& str);
 
 extern LogLevel app_log_level;
 extern std::ostream* app_log_stream;
@@ -44,13 +47,17 @@ private:
     void logLevel();
 
     std::osyncstream stream_;
-    const LogLevel log_level_;    
+    const LogLevel log_level_;
     bool something_written_ = false;
 };
 
 // Shortcuts, for readability
 inline Log LogTrace() {
     return Log(LL_TRACE);
+}
+
+inline Log LogDebug() {
+    return Log(LL_DEBUG);
 }
 
 inline Log LogInfo() {

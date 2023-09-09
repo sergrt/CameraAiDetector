@@ -70,7 +70,7 @@ cv::Mat VideoWriter::getPreviewImage() const {
     for (size_t i = 0; i < preview_images; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
-            LogTrace() << "Add row, idx = " << idx;
+            LogDebug() << "Add row, idx = " << idx;
             rows.push_back(preview_frames_[idx]);
         } else {
             auto& row = rows.back();

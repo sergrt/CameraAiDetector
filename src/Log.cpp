@@ -1,24 +1,46 @@
 #include "Log.h"
 
+#include "Helpers.h"
+
 #include <chrono>
+#include <map>
+#include <stdexcept>
 #include <string>
 
 namespace {
 
-std::string logLevelToString(LogLevel log_level) {
-    if (log_level == LL_TRACE)
-        return "[TRAC]";
-    if (log_level == LL_INFO)
-        return "[INFO]";
-    if (log_level == LL_WARNING)
-        return "[WARN]";
-    if (log_level == LL_ERROR)
-        return "[ERRO]";
+const std::map<LogLevel, std::string> levelToStr = {
+    {LL_TRACE,   "[TRACE]"},
+    {LL_DEBUG,   "[DEBUG]"},
+    {LL_INFO,    "[INFO ]"},
+    {LL_WARNING, "[WARN ]"},
+    {LL_ERROR,   "[ERROR]"}
+};
 
-    return "[UNKN]";
+const std::map<std::string, LogLevel> strToLevel = {
+    {"TRACE",   LL_TRACE},
+    {"DEBUG",   LL_DEBUG},
+    {"INFO",    LL_INFO},
+    {"WARN",    LL_WARNING},
+    {"WARNING", LL_WARNING},
+    {"ERROR",   LL_ERROR}
+};
+
+std::string logLevelToString(LogLevel log_level) {
+    const auto it = levelToStr.find(log_level);
+    if (it == end(levelToStr))
+        throw std::runtime_error("Unknown log level value specified");
+    return it->second;
 }
 
 }  // namespace
+
+LogLevel stringToLogLevel(const std::string& str) {
+    const auto it = strToLevel.find(to_upper(str));
+    if (it == end(strToLevel))
+        throw std::runtime_error("Unknown log level string specified");
+    return it->second;
+}
 
 Log::Log(LogLevel level)
     : stream_(std::osyncstream(*app_log_stream))

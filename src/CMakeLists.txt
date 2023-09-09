@@ -60,6 +60,7 @@ set(HEADER
   Core.h
   FinalAction.h
   FrameReader.h
+  Helpers.h
   Log.h
   Settings.h
   StreamProperties.h

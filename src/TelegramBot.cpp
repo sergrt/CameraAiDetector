@@ -1,5 +1,7 @@
-#include "Log.h"
 #include "TelegramBot.h"
+
+#include "Helpers.h"
+#include "Log.h"
 #include "UidUtils.h"
 #include "VideoWriter.h"
 
@@ -8,12 +10,6 @@
 #include <regex>
 
 namespace {
-
-std::string to_upper(const std::string& str) {
-    auto upper_str = str;
-    std::transform(begin(upper_str), end(upper_str), begin(upper_str), ::toupper);
-    return upper_str;
-}
 
 struct Filter {
     // Using struct here - potentially this filter is extensible to different types of detects etc.
@@ -56,26 +52,29 @@ bool applyFilter(const Filter& filter, const std::string& file_name) {
 
 }  // namespace
 
-TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage_path, std::vector<uint64_t> allowed_users)
+TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users)
     : bot_(std::make_unique<TgBot::Bot>(token))
     , storage_path_(std::move(storage_path))
     , allowed_users_(std::move(allowed_users)) {
 
     bot_->getEvents().onCommand("start", [this](TgBot::Message::Ptr message) {
-        if (const auto id = message->chat->id; isUserAllowed(id))
-            bot_->getApi().sendMessage(id, "Use commands from menu");  // TODO: check result and report error - here and on
+        if (const auto id = message->chat->id; isUserAllowed(id)) {
+            if (!bot_->getApi().sendMessage(id, "Use commands from menu"))
+                LogError() << "/start reply send failed to user " << id;
+        }
     });
     bot_->getEvents().onCommand("image", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             std::lock_guard lock(photo_mutex_);
-            users_waiting_for_photo_.push_back(id);
+            users_waiting_for_photo_.insert(id);
         }
     });
     bot_->getEvents().onCommand("ping", [&](TgBot::Message::Ptr message) { 
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
             const std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", cur_time);
-            bot_->getApi().sendMessage(id, timestamp);
+            if (!bot_->getApi().sendMessage(id, timestamp))
+                LogError() << "/ping reply send failed to user " << id;
         }
     });
     bot_->getEvents().onCommand("videos", [&](TgBot::Message::Ptr message) {
@@ -91,10 +90,9 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     }
                 }
             }
-            if (!commands_list.empty())
-                bot_->getApi().sendMessage(id, commands_list);
-            else
-                bot_->getApi().sendMessage(id, "No files found");
+            const auto text = (!commands_list.empty() ? commands_list : "No files found");
+            if (!bot_->getApi().sendMessage(id, text))
+                LogError() << "/videos reply send failed to user " << id;
         }
     });
     bot_->getEvents().onCommand("previews", [&](TgBot::Message::Ptr message) {
@@ -111,10 +109,12 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                     }
                 }
             }
-            if (any_preview_posted)
+            if (any_preview_posted) {
                 postMessage(id, "Completed");
-            else
-                bot_->getApi().sendMessage(id, "No files found");
+            } else {
+                if (!bot_->getApi().sendMessage(id, "No files found"))
+                    LogError() << "/previews reply send failed to user " << id;
+            }
         }
     });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
@@ -124,16 +124,22 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 const std::string uid = message->text.substr(videoCmdPrefix().size());  // uid of file
                 if (!isUidValid(uid)) {
                     LogWarning() << "User " << id << " asked file with invalid uid: " << uid;
-                    bot_->getApi().sendMessage(id, "Invalid file requested");
+                    if (!bot_->getApi().sendMessage(id, "Invalid file requested"))
+                        LogError() << videoCmdPrefix() << " reply send failed to user " << id;
                     return;
                 }
                 const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
                 LogInfo() << "File uid extracted: " << uid << ", full path: " << file_path;
 
-                if (std::filesystem::exists(file_path))
-                    bot_->getApi().sendVideo(id, TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4"), false, 0, 0, 0, "", file_path.filename().generic_string());
-                else
-                    bot_->getApi().sendMessage(id, "Invalid file specified");
+                if (std::filesystem::exists(file_path)) {
+                    const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
+                    const auto caption = file_path.filename().generic_string();
+                    if (!bot_->getApi().sendVideo(id, video, false, 0, 0, 0, "", caption))
+                        LogError() << videoCmdPrefix() << " video file send failed to user " << id;
+                } else {
+                    if (!bot_->getApi().sendMessage(id, "Invalid file specified"))
+                        LogError() << videoCmdPrefix() << " reply send failed to user " << id;
+                }
             }
         } else {
             LogWarning() << "Unauthorized user tried to access: " << id;
@@ -153,59 +159,72 @@ bool TelegramBot::someoneIswaitingForPhoto() const {
     return !users_waiting_for_photo_.empty();
 }
 
-void TelegramBot::sendOnDemandPhoto(const std::string& file_name, const std::vector<uint64_t>& recipients) {
-    std::lock_guard lock(photo_mutex_);
-    const auto path = storage_path_ / file_name;
-    if (!std::filesystem::exists(path)) {  // TODO: Refactor here and on for something like getCheckedFilePath(file_name)
-        LogError() << "File " << path << " is missing";
-        return;
+bool TelegramBot::getCheckedFileFullPath(const std::string& file_name, std::filesystem::path& path) const {
+    if (path = storage_path_ / file_name; !std::filesystem::exists(path)) {
+        LogError() << "File " << path << " not found";
+        return false;
     }
+    return true;
+}
 
-    for (const auto& user : recipients) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
+void TelegramBot::sendOnDemandPhoto(const std::string& file_name) {
+    std::filesystem::path path;
+    if (getCheckedFileFullPath(file_name, path)) {
+        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
+        const auto caption = path.filename().generic_string();
+
+        std::set<uint64_t> recipients;
+        {
+            std::lock_guard lock(photo_mutex_);
+            std::swap(recipients, users_waiting_for_photo_);
+        }
+
+        for (const auto& user : recipients) {
+            if (!bot_->getApi().sendPhoto(user, photo, caption)) {
+                LogError() << "On-demand photo send failed to user " << user;
+            }
+        }
     }
-    users_waiting_for_photo_.clear();
 }
 
 void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
-    const auto path = storage_path_ / file_name;
-    if (!std::filesystem::exists(path)) {
-        LogError() << "File " << path << " is missing";
-        return;
-    }
-
-    for (const auto& user : allowed_users_) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), path.filename().generic_string());
+    std::filesystem::path path;
+    if (getCheckedFileFullPath(file_name, path)) {
+        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
+        const auto caption = path.filename().generic_string();
+        for (const auto& user : allowed_users_) {
+            if (!bot_->getApi().sendPhoto(user, photo, caption)) {
+                LogError() << "Alarm photo send failed to user " << user;
+            }
+        }
     }
 }
 
-void TelegramBot::sendMessage(const std::vector<uint64_t>& recipients, const std::string& message) {
+void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::string& message) {
     for (const auto& user : recipients) {
-        bot_->getApi().sendMessage(user, message);
+        if (!bot_->getApi().sendMessage(user, message)) {
+            LogError() << "Message send failed to user " << user;
+        }
     }
 }
 
 void TelegramBot::sendVideoPreview(const std::string& file_name, const std::string& message) {
-    const auto path = storage_path_ / file_name;
-    if (!std::filesystem::exists(path)) {
-        LogError() << "File " << path << " is missing";
-        return;
-    }
-
-    for (const auto& user : allowed_users_) {
-        bot_->getApi().sendPhoto(user, TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg"), message, 0, nullptr, "", true);  // NOTE: No notification here
+    std::filesystem::path path;
+    if (getCheckedFileFullPath(file_name, path)) {
+        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
+        const auto caption = path.filename().generic_string();
+        for (const auto& user : allowed_users_) {
+            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "", true)) {  // NOTE: No notification here
+                LogError() << "Video preview send failed to user " << user;
+            }
+        }
     }
 }
 
 void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
-    std::vector<uint64_t> recipients;
-    {
-        std::lock_guard lock(photo_mutex_);
-        std::swap(recipients, users_waiting_for_photo_);
-    }
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::ON_DEMAND_PHOTO, "", file_name, std::move(recipients));
+        notification_queue_.emplace_back(NotificationQueueItem::Type::ON_DEMAND_PHOTO, "", file_name);
     }
     queue_cv_.notify_one();
 }
@@ -221,7 +240,7 @@ void TelegramBot::postAlarmPhoto(const std::string& file_name) {
 void TelegramBot::postMessage(uint64_t user_id, const std::string& message) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::MESSAGE, message, "", std::vector<uint64_t>{ user_id });
+        notification_queue_.emplace_back(NotificationQueueItem::Type::MESSAGE, message, "", std::set<uint64_t>{ user_id });
     }
     queue_cv_.notify_one();
 }
@@ -241,7 +260,9 @@ std::string TelegramBot::videoCmdPrefix() {
 }
 
 void TelegramBot::pollThreadFunc() {
-    bot_->getApi().deleteWebhook();
+    if (!bot_->getApi().deleteWebhook()) {
+        LogError() << "Unable to delete bot Webhook";
+    }
     TgBot::TgLongPoll longPoll(*bot_);
 
     while (!stop_) {
@@ -264,7 +285,7 @@ void TelegramBot::queueThreadFunc() {
         if (item.type == NotificationQueueItem::Type::MESSAGE) {
             sendMessage(item.recipients, item.message);
         } else if (item.type == NotificationQueueItem::Type::ON_DEMAND_PHOTO) {
-            sendOnDemandPhoto(item.file_name, item.recipients);
+            sendOnDemandPhoto(item.file_name);
         } else if (item.type == NotificationQueueItem::Type::ALARM_PHOTO) {
             sendAlarmPhoto(item.file_name);
         } else if (item.type == NotificationQueueItem::Type::PREVIEW) {
@@ -275,7 +296,7 @@ void TelegramBot::queueThreadFunc() {
 
 void TelegramBot::start() {
     if (!stop_) {
-        LogWarning() << "Attempt start() on already running bot";
+        LogInfo() << "Attempt start() on already running bot";
         return;
     }
 
@@ -286,7 +307,7 @@ void TelegramBot::start() {
 
 void TelegramBot::stop() {
     if (stop_) {
-        LogWarning() << "Attempt stop() on already stopped bot";
+        LogInfo() << "Attempt stop() on already stopped bot";
     }
     stop_ = true;
     queue_cv_.notify_all();
@@ -297,6 +318,5 @@ void TelegramBot::stop() {
 
     if (queue_thread_.joinable())
         queue_thread_.join();
-
     */
 }
