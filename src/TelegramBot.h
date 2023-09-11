@@ -6,6 +6,7 @@
 #include <deque>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
@@ -23,6 +24,11 @@ struct NotificationQueueItem {
     std::string message;
     std::string file_name;
     std::set<uint64_t> recipients;
+};
+
+struct Filter {
+    // Using struct here - potentially this filter is extensible to different types of detects etc.
+    std::chrono::minutes depth;
 };
 
 class TelegramBot final {
@@ -61,7 +67,11 @@ private:
     void pollThreadFunc();
     void queueThreadFunc();
 
-    void sendVideoImpl(uint64_t user_id, const std::string& video_uid);
+    void processVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
+    void processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void processOnDemandCmdImpl(uint64_t user_id);
+    void processPingCmdImpl(uint64_t user_id);
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;
