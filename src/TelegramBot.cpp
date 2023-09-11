@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <regex>
 
+const size_t max_tg_message_len = 4096;
+
 namespace {
 
 struct Filter {
@@ -79,20 +81,29 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     });
     bot_->getEvents().onCommand("videos", [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
-            std::string commands_list;
+            std::vector<std::string> commands_list;
             const auto filter = getFilter(message->text);
             for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
                 if (VideoWriter::isVideoFile(entry.path())) {
                     const auto file_name = entry.path().filename().generic_string();
                     if (!filter || applyFilter(*filter, file_name)) {
                         const auto file_size = static_cast<int>(std::filesystem::file_size(entry) / 1'000'000);
-                        commands_list += videoCmdPrefix() + getUidFromFileName(file_name) + "    " + std::to_string(file_size) + " MB\n";
+                        std::string command = videoCmdPrefix() + getUidFromFileName(file_name) + "    " + std::to_string(file_size) + " MB\n";
+                        if (commands_list.empty() || commands_list.back().size() + command.size() > max_tg_message_len) {
+                            commands_list.emplace_back(std::move(command));
+                        } else {
+                            commands_list.back() += command;
+                        }
                     }
                 }
             }
-            const auto text = (!commands_list.empty() ? commands_list : "No files found");
-            if (!bot_->getApi().sendMessage(id, text))
-                LogError() << "/videos reply send failed to user " << id;
+            if (commands_list.empty())
+                commands_list.emplace_back("No files found");
+
+            for (const auto& cmd : commands_list) {
+                if (!bot_->getApi().sendMessage(id, cmd))
+                    LogError() << "/videos reply send failed to user " << id;
+            }
         }
     });
     bot_->getEvents().onCommand("previews", [&](TgBot::Message::Ptr message) {
@@ -122,33 +133,45 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             if (StringTools::startsWith(message->text, videoCmdPrefix())) {
                 LogInfo() << "video command received: " << message->text;
                 const std::string uid = message->text.substr(videoCmdPrefix().size());  // uid of file
-                if (!isUidValid(uid)) {
-                    LogWarning() << "User " << id << " asked file with invalid uid: " << uid;
-                    if (!bot_->getApi().sendMessage(id, "Invalid file requested"))
-                        LogError() << videoCmdPrefix() << " reply send failed to user " << id;
-                    return;
-                }
-                const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
-                LogInfo() << "File uid extracted: " << uid << ", full path: " << file_path;
-
-                if (std::filesystem::exists(file_path)) {
-                    const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-                    const auto caption = file_path.filename().generic_string();
-                    if (!bot_->getApi().sendVideo(id, video, false, 0, 0, 0, "", caption))
-                        LogError() << videoCmdPrefix() << " video file send failed to user " << id;
-                } else {
-                    if (!bot_->getApi().sendMessage(id, "Invalid file specified"))
-                        LogError() << videoCmdPrefix() << " reply send failed to user " << id;
-                }
+                sendVideoImpl(id, uid);
             }
         } else {
             LogWarning() << "Unauthorized user tried to access: " << id;
+        }
+    });
+    bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
+        if (const auto id = query->message->chat->id; isUserAllowed(id)) {
+            if (StringTools::startsWith(query->data, videoCmdPrefix())) {
+                const std::string video_id = query->data.substr(videoCmdPrefix().size());
+                sendVideoImpl(id, video_id);
+            }
         }
     });
 }
 
 TelegramBot::~TelegramBot() {
     stop();
+}
+
+void TelegramBot::sendVideoImpl(uint64_t user_id, const std::string& video_uid) {
+    if (!isUidValid(video_uid)) {
+        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
+        if (!bot_->getApi().sendMessage(user_id, "Invalid file requested"))
+            LogError() << videoCmdPrefix() << " reply send failed to user " << user_id;
+        return;
+    }
+    const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(video_uid);
+    LogInfo() << "File uid extracted: " << video_uid << ", full path: " << file_path;
+
+    if (std::filesystem::exists(file_path)) {
+        const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
+        const auto caption = file_path.filename().generic_string();
+        if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption))
+            LogError() << videoCmdPrefix() << " video file send failed to user " << user_id;
+    } else {
+        if (!bot_->getApi().sendMessage(user_id, "Invalid file specified"))
+            LogError() << videoCmdPrefix() << " reply send failed to user " << user_id;
+    }
 }
 
 bool TelegramBot::isUserAllowed(uint64_t user_id) const {
@@ -210,9 +233,16 @@ void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::s
 void TelegramBot::sendVideoPreview(const std::string& file_name) {
     if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
         const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
-        const auto caption = path.filename().generic_string();
+        const auto cmd = videoCmdPrefix() + getUidFromFileName(file_name);
+
+        TgBot::InlineKeyboardMarkup::Ptr keyboard(new TgBot::InlineKeyboardMarkup);
+        TgBot::InlineKeyboardButton::Ptr viewButton(new TgBot::InlineKeyboardButton);
+        viewButton->text = "View video";
+        viewButton->callbackData = cmd;
+        keyboard->inlineKeyboard.push_back({viewButton});
+
         for (const auto& user : allowed_users_) {
-            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "", true)) {  // NOTE: No notification here
+            if (!bot_->getApi().sendPhoto(user, photo, "", 0, keyboard, "", true)) {  // NOTE: No notification here
                 LogError() << "Video preview send failed to user " << user;
             }
         }

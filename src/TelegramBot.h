@@ -61,6 +61,8 @@ private:
     void pollThreadFunc();
     void queueThreadFunc();
 
+    void sendVideoImpl(uint64_t user_id, const std::string& video_uid);
+
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;
     std::set<uint64_t> allowed_users_;

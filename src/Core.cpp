@@ -191,7 +191,7 @@ void Core::captureThreadFunc() {
 
             // Useful performance debug output
             static auto debug_buffer_out_time = std::chrono::steady_clock::now();
-            if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(10)) {
+            if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(30)) {
                 LogDebug() << "Current buffer size = " << buffer_size;
                 debug_buffer_out_time = now;
             }
