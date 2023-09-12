@@ -189,16 +189,21 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             if (StringTools::startsWith(query->data, videoCmdPrefix())) {
                 const std::string video_id = query->data.substr(videoCmdPrefix().size());
                 processVideoCmdImpl(id, video_id);
+                postAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, previews_cmd)) {  // Space is a separator between cmd and filter
                 const auto filter = getFilter(command.substr(previews_cmd.size()));
                 processPreviewsCmdImpl(id, filter);
+                postAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, videos_cmd)) {  // Space is a separator between cmd and filter
                 const auto filter = getFilter(command.substr(videos_cmd.size()));
                 processVideosCmdImpl(id, filter);
+                postAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, image_cmd)) {
                 processOnDemandCmdImpl(id);
+                postAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, ping_cmd)) {
                 processPingCmdImpl(id);
+                postAnswerCallback(query->id);
             }
         }
     });
@@ -378,6 +383,16 @@ void TelegramBot::sendMenu(uint64_t recipient) {
     }
 }
 
+void TelegramBot::sendAnswer(const std::string& callback_id) {
+    try {
+        if (!bot_->getApi().answerCallbackQuery(callback_id))
+            LogError() << "Answer callback query send failed";
+    } catch (std::exception& e) {
+        // Timed-out queries trigger this exception, so this exception might be non-fatal, but still logged
+        logException("Exception (non-fatal?) while sending answer callback query", __FILE__, __LINE__, e.what());
+    }
+}
+
 void TelegramBot::postOnDemandPhoto(const std::filesystem::path& file_path) {
     {
         std::lock_guard lock(queue_mutex_);
@@ -427,6 +442,15 @@ void TelegramBot::postMenu(uint64_t user_id) {
     queue_cv_.notify_one();
 }
 
+void TelegramBot::postAnswerCallback(const std::string& callback_id) {
+    {
+        std::lock_guard lock(queue_mutex_);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::ANSWER, callback_id, "", std::set<uint64_t>{});
+    }
+    queue_cv_.notify_one();
+}
+
+
 std::string TelegramBot::videoCmdPrefix() {
     auto video_prefix = "/" + video_cmd + "_";
     return video_prefix;
@@ -464,7 +488,7 @@ void TelegramBot::queueThreadFunc() {
         lock.unlock();
 
         if (item.type == NotificationQueueItem::Type::MESSAGE) {
-            sendMessage(item.recipients, item.message);
+            sendMessage(item.recipients, item.payload);
         } else if (item.type == NotificationQueueItem::Type::ON_DEMAND_PHOTO) {
             sendOnDemandPhoto(item.file_path);
         } else if (item.type == NotificationQueueItem::Type::ALARM_PHOTO) {
@@ -475,6 +499,8 @@ void TelegramBot::queueThreadFunc() {
             sendVideo(*item.recipients.begin(), item.file_path);
         } else if (item.type == NotificationQueueItem::Type::MENU) {
             sendMenu(*item.recipients.begin());
+        } else if (item.type == NotificationQueueItem::Type::ANSWER) {
+            sendAnswer(item.payload);
         }
     }
 }

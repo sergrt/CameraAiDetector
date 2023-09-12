@@ -19,11 +19,12 @@ struct NotificationQueueItem {
         ALARM_PHOTO,
         PREVIEW,
         VIDEO,
-        MENU
+        MENU,
+        ANSWER
     };
 
     Type type;
-    std::string message;
+    std::string payload;
     std::filesystem::path file_path;
     std::set<uint64_t> recipients;
 };
@@ -53,6 +54,7 @@ public:
     void postVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path);
     void postVideo(uint64_t user_id, const std::filesystem::path& file_path);
     void postMenu(uint64_t user_id);
+    void postAnswerCallback(const std::string& callback_id);
 
     bool someoneIsWaitingForPhoto() const;
 
@@ -66,6 +68,7 @@ private:
     void sendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path);
     void sendVideo(uint64_t recipient, const std::filesystem::path& file_path);
     void sendMenu(uint64_t recipient);
+    void sendAnswer(const std::string& callback_id);
 
     bool isUserAllowed(uint64_t user_id) const;
 
