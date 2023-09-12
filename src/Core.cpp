@@ -3,8 +3,6 @@
 #include "Log.h"
 #include "UidUtils.h"
 
-#include <chrono>
-
 const cv::Scalar frame_color = cv::Scalar(0.0, 0.0, 200.0);
 constexpr int frame_width = 2;
 constexpr size_t max_buffer_size = 500u;  // Approx 20 sec of 25 fps stream
@@ -29,7 +27,7 @@ void Core::postOnDemandPhoto(const cv::Mat& frame) {
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
         LogError() << "Error write on-demand photo, path = " << path;
-    bot_.postOnDemandPhoto(file_name);
+    bot_.postOnDemandPhoto(path);
 }
 
 void Core::initVideoWriter() {
@@ -41,10 +39,10 @@ void Core::initVideoWriter() {
 void Core::postAlarmPhoto(const cv::Mat& frame) {
     last_alarm_photo_sent_ = std::chrono::steady_clock::now();
     const auto file_name = generateFileName("alarm_") + ".jpg";
-    const auto path = (settings_.storage_path / file_name).generic_string();
-    if (!cv::imwrite(path, frame))
+    const auto path = settings_.storage_path / file_name;
+    if (!cv::imwrite(path.generic_string(), frame))
         LogError() << "Error write alarm photo, path = " << path;
-    bot_.postAlarmPhoto(file_name);
+    bot_.postAlarmPhoto(path);
 } 
 
 void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
@@ -53,17 +51,17 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     }
 }
 
-std::string Core::saveVideoPreview(const std::string& video_file_uid) {
-    auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
+std::filesystem::path Core::saveVideoPreview(const std::string& video_file_uid) {
+    const auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
-    const auto path = (settings_.storage_path / file_name).generic_string();
-    if (!cv::imwrite(path, video_writer_->getPreviewImage(), img_encode_param))
+    const auto path = settings_.storage_path / file_name;
+    if (!cv::imwrite(path.generic_string(), video_writer_->getPreviewImage(), img_encode_param))
         LogError() << "Error write video preview image, path = " << path;
-    return file_name;
+    return path;
 }
 
-void Core::postVideoPreview(const std::string& file_name, const std::string& uid) {
-    bot_.postVideoPreview(file_name, uid);
+void Core::postVideoPreview(const std::filesystem::path& file_path) {
+    bot_.postVideoPreview({}, file_path);
 }
 
 void Core::processingThreadFunc() {
@@ -87,7 +85,7 @@ void Core::processingThreadFunc() {
         buffer_.pop_front();
         lock.unlock();
 
-        if (bot_.someoneIswaitingForPhoto())
+        if (bot_.someoneIsWaitingForPhoto())
             postOnDemandPhoto(frame);
 
         static uint64_t i = 0;
@@ -143,8 +141,8 @@ void Core::processingThreadFunc() {
                         if (isCooldownFinished()) {
                             const auto uid = video_writer_->getUid();
                             LogInfo() << "Finish writing file with uid = " << uid;
-                            if (const auto preview_file_name = saveVideoPreview(uid); settings_.send_video_previews)
-                                postVideoPreview(preview_file_name, uid);
+                            if (const auto preview_file_path = saveVideoPreview(uid); settings_.send_video_previews)
+                                postVideoPreview(preview_file_path);
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();

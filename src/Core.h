@@ -10,6 +10,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <deque>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -34,8 +35,8 @@ private:
 
     void postOnDemandPhoto(const cv::Mat& frame);
     void postAlarmPhoto(const cv::Mat& frame);
-    std::string saveVideoPreview(const std::string& video_file_uid);
-    void postVideoPreview(const std::string& file_name, const std::string& uid);
+    std::filesystem::path saveVideoPreview(const std::string& video_file_uid);
+    void postVideoPreview(const std::filesystem::path& file_path);
 
     static void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
     void initVideoWriter();

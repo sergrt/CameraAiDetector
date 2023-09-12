@@ -147,12 +147,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
 
     bot_->getEvents().onCommand("start", [this](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
-            try {
-                if (!bot_->getApi().sendMessage(id, "Start here:", false, 0, makeStartMenu()))
-                    LogError() << "/start reply send failed to user " << id;
-            } catch (std::exception& e) {
-                logException("Exception while sending message", __FILE__, __LINE__, e.what());
-            }
+            postMenu(id);
         }
     });
     bot_->getEvents().onCommand(image_cmd, [&](TgBot::Message::Ptr message) {
@@ -213,102 +208,63 @@ TelegramBot::~TelegramBot() {
     stop();
 }
 
-void TelegramBot::processVideoCmdImpl(uint64_t user_id, const std::string& video_uid) {
-    if (!isUidValid(video_uid)) {
-        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
-        try {
-            if (!bot_->getApi().sendMessage(user_id, "Invalid file requested"))
-                LogError() << videoCmdPrefix() << " reply send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending message", __FILE__, __LINE__, e.what());
-        }
-        return;
-    }
-    const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(video_uid);
-    LogInfo() << "File uid extracted: " << video_uid << ", full path: " << file_path;
-
-    if (std::filesystem::exists(file_path)) {
-        const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-        const auto caption = file_path.filename().generic_string();
-        try {
-            if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption))
-                LogError() << videoCmdPrefix() << " video file send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending video", __FILE__, __LINE__, e.what());
-        }
-    } else {
-        try {
-            if (!bot_->getApi().sendMessage(user_id, "Invalid file specified"))
-                LogError() << videoCmdPrefix() << " reply send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending message", __FILE__, __LINE__, e.what());
-        }
-    }
-}
-
-void TelegramBot::processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
-    const auto files = collectVideoFileUids(storage_path_, filter);
-    if (files.empty()) {
-        try {
-            if (!bot_->getApi().sendMessage(user_id, "No files found"))
-                LogError() << "/previews reply send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending message", __FILE__, __LINE__, e.what());
-        }
-        return;
-    }
-
-    for (const auto& file : files) {
-        const auto& uid = file.uid;
-        postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
-    }
-    postMessage(user_id, "Previews sending completed");
-}
-
-void TelegramBot::processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
-    const auto files = collectVideoFileUids(storage_path_, filter);
-    if (files.empty()) {
-        try {
-            if (!bot_->getApi().sendMessage(user_id, "No files found"))
-                LogError() << "/videos reply send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending message", __FILE__, __LINE__, e.what());
-        }
-        return;
-    }
-
-    std::vector<std::string> commands_messages;
-    for (const auto& file : files) {
-        std::string command = videoCmdPrefix() + file.uid + " (" + std::to_string(file.size_mb) + " MB)\n";
-        if (commands_messages.empty() || commands_messages.back().size() + command.size() > max_tg_message_len) {
-            commands_messages.emplace_back(std::move(command));
-        } else {
-            commands_messages.back() += command;
-        }
-    }
-
-    for (const auto& message : commands_messages) {
-        try {
-            if (!bot_->getApi().sendMessage(user_id, message))
-                LogError() << "/videos reply send failed to user " << user_id;
-        } catch (std::exception& e) {
-            logException("Exception while sending message", __FILE__, __LINE__, e.what());
-        }
-    }
-}
-
 void TelegramBot::processOnDemandCmdImpl(uint64_t user_id) {
     std::lock_guard lock(photo_mutex_);
     users_waiting_for_photo_.insert(user_id);
 }
 
 void TelegramBot::processPingCmdImpl(uint64_t user_id) {
-    const auto message = prepareStatusInfo(storage_path_);
-    try {
-        if (!bot_->getApi().sendMessage(user_id, message))
-            LogError() << "/ping reply send failed to user " << user_id;
-    } catch (std::exception& e) {
-        logException("Exception while sending message", __FILE__, __LINE__, e.what());
+    postMessage(user_id, prepareStatusInfo(storage_path_));
+}
+
+void TelegramBot::processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
+    const auto files = collectVideoFileUids(storage_path_, filter);
+    if (files.empty()) {
+        postMessage(user_id, "No files found");
+        return;
+    }
+
+    std::string commands_message;
+    for (const auto& file : files) {
+        std::string command = videoCmdPrefix() + file.uid + " (" + std::to_string(file.size_mb) + " MB)\n";
+        if (commands_message.size() + command.size() > max_tg_message_len) {
+            postMessage(user_id, commands_message);
+            commands_message = command;
+        } else {
+            commands_message += command;
+        }
+    }
+    postMessage(user_id, commands_message);
+}
+
+void TelegramBot::processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
+    const auto files = collectVideoFileUids(storage_path_, filter);
+    if (files.empty()) {
+        postMessage(user_id, "No files found");
+        return;
+    }
+
+    for (const auto& file : files) {
+        const std::filesystem::path file_path = storage_path_ / VideoWriter::generatePreviewFileName(file.uid);
+        postVideoPreview(user_id, file_path);
+    }
+    postMessage(user_id, "Previews sending completed");
+}
+
+void TelegramBot::processVideoCmdImpl(uint64_t user_id, const std::string& video_uid) {
+    if (!isUidValid(video_uid)) {
+        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
+        postMessage(user_id, "Invalid file requested");
+        return;
+    }
+
+    const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(video_uid);
+    LogInfo() << "File uid: " << video_uid << ", full path: " << file_path;
+
+    if (std::filesystem::exists(file_path)) {
+        postVideo(user_id, file_path);
+    } else {
+        postMessage(user_id, "Invalid file specified - path not found");
     }
 }
 
@@ -321,23 +277,14 @@ bool TelegramBot::isUserAllowed(uint64_t user_id) const {
     return true;
 }
 
-bool TelegramBot::someoneIswaitingForPhoto() const {
+bool TelegramBot::someoneIsWaitingForPhoto() const {
     return !users_waiting_for_photo_.empty();
 }
 
-bool TelegramBot::getCheckedFileFullPath(const std::string& file_name, std::filesystem::path& path) const {
-    if (path = storage_path_ / file_name; !std::filesystem::exists(path)) {
-        LogError() << "File " << path << " not found";
-        return false;
-    }
-    return true;
-}
-
-void TelegramBot::sendOnDemandPhoto(const std::string& file_name) {
-    std::filesystem::path path;
-    if (getCheckedFileFullPath(file_name, path)) {
-        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
-        const auto caption = path.filename().generic_string();
+void TelegramBot::sendOnDemandPhoto(const std::filesystem::path& file_path) {
+    if (std::filesystem::exists(file_path)) {
+        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+        const auto caption = file_path.filename().generic_string();
 
         std::set<uint64_t> recipients;
         {
@@ -356,10 +303,10 @@ void TelegramBot::sendOnDemandPhoto(const std::string& file_name) {
     }
 }
 
-void TelegramBot::sendAlarmPhoto(const std::string& file_name) {
-    if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
-        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
-        const auto caption = path.filename().generic_string();
+void TelegramBot::sendAlarmPhoto(const std::filesystem::path& file_path) {
+    if (std::filesystem::exists(file_path)) {
+        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+        const auto caption = file_path.filename().generic_string();
         for (const auto& user : allowed_users_) {
             try {
                 if (!bot_->getApi().sendPhoto(user, photo, caption))
@@ -382,23 +329,25 @@ void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::s
     }
 }
 
-void TelegramBot::sendVideoPreview(const std::string& file_name) {
-    if (std::filesystem::path path; getCheckedFileFullPath(file_name, path)) {
-        const auto photo = TgBot::InputFile::fromFile(path.generic_string(), "image/jpeg");
-        const auto cmd = videoCmdPrefix() + getUidFromFileName(file_name);
+void TelegramBot::sendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path) {
+    const auto file_name = file_path.filename().generic_string();
+    const auto uid = getUidFromFileName(file_name);
+    const auto video_file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
+    if (std::filesystem::exists(file_path) && std::filesystem::exists(video_file_path)) {
+        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+        const auto cmd = videoCmdPrefix() + uid;
 
         TgBot::InlineKeyboardMarkup::Ptr keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
         TgBot::InlineKeyboardButton::Ptr viewButton = std::make_shared<TgBot::InlineKeyboardButton>();
-
-        const auto video_file = storage_path_ / VideoWriter::generateVideoFileName(getUidFromFileName(file_name));
-        viewButton->text = getHumanDateTime(file_name) + " (" + std::to_string(getFileSizeMb(video_file)) + " MB)";
+        
+        viewButton->text = getHumanDateTime(file_name) + " (" + std::to_string(getFileSizeMb(video_file_path)) + " MB)";
         viewButton->callbackData = cmd;
         keyboard->inlineKeyboard.push_back({viewButton});
 
-        for (const auto& user : allowed_users_) {
+        for (const auto& user_id : recipients) {
             try {
-                if (!bot_->getApi().sendPhoto(user, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
-                    LogError() << "Video preview send failed to user " << user;
+                if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
+                    LogError() << "Video preview send failed to user " << user_id;
             } catch (std::exception& e) {
                 logException("Exception while sending photo", __FILE__, __LINE__, e.what());
             }
@@ -406,18 +355,41 @@ void TelegramBot::sendVideoPreview(const std::string& file_name) {
     }
 }
 
-void TelegramBot::postOnDemandPhoto(const std::string& file_name) {
+void TelegramBot::sendVideo(uint64_t recipient, const std::filesystem::path& file_path) {
+    if (std::filesystem::exists(file_path)) {
+        const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
+        const auto caption = file_path.filename().generic_string();
+
+        try {
+            if (!bot_->getApi().sendVideo(recipient, video, false, 0, 0, 0, "", caption))
+                LogError() << "Video file " << file_path << " send failed to user " << recipient;
+        } catch (std::exception& e) {
+            logException("Exception while sending video", __FILE__, __LINE__, e.what());
+        }
+    }
+}
+
+void TelegramBot::sendMenu(uint64_t recipient) {
+    try {
+        if (!bot_->getApi().sendMessage(recipient, "Start here", false, 0, makeStartMenu()))
+            LogError() << "/start reply send failed to user " << recipient;
+    } catch (std::exception& e) {
+        logException("Exception while sending menu", __FILE__, __LINE__, e.what());
+    }
+}
+
+void TelegramBot::postOnDemandPhoto(const std::filesystem::path& file_path) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::ON_DEMAND_PHOTO, "", file_name);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::ON_DEMAND_PHOTO, "", file_path);
     }
     queue_cv_.notify_one();
 }
 
-void TelegramBot::postAlarmPhoto(const std::string& file_name) {
+void TelegramBot::postAlarmPhoto(const std::filesystem::path& file_path) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::ALARM_PHOTO, "", file_name);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::ALARM_PHOTO, "", file_path);
     }
     queue_cv_.notify_one();
 }
@@ -430,10 +402,27 @@ void TelegramBot::postMessage(uint64_t user_id, const std::string& message) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::postVideoPreview(const std::string& file_name, const std::string& video_uid) {
+void TelegramBot::postVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path) {
+    {
+        std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
+        std::lock_guard lock(queue_mutex_);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, "", file_path, recipients);
+    }
+    queue_cv_.notify_one();
+}
+
+void TelegramBot::postVideo(uint64_t user_id, const std::filesystem::path& file_path) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::PREVIEW, "", file_name);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::VIDEO, "", file_path, std::set<uint64_t>{user_id});
+    }
+    queue_cv_.notify_one();
+}
+
+void TelegramBot::postMenu(uint64_t user_id) {
+    {
+        std::lock_guard lock(queue_mutex_);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::MENU, "", "", std::set<uint64_t>{user_id});
     }
     queue_cv_.notify_one();
 }
@@ -477,11 +466,15 @@ void TelegramBot::queueThreadFunc() {
         if (item.type == NotificationQueueItem::Type::MESSAGE) {
             sendMessage(item.recipients, item.message);
         } else if (item.type == NotificationQueueItem::Type::ON_DEMAND_PHOTO) {
-            sendOnDemandPhoto(item.file_name);
+            sendOnDemandPhoto(item.file_path);
         } else if (item.type == NotificationQueueItem::Type::ALARM_PHOTO) {
-            sendAlarmPhoto(item.file_name);
+            sendAlarmPhoto(item.file_path);
         } else if (item.type == NotificationQueueItem::Type::PREVIEW) {
-            sendVideoPreview(item.file_name);
+            sendVideoPreview(item.recipients, item.file_path);
+        } else if (item.type == NotificationQueueItem::Type::VIDEO) {
+            sendVideo(*item.recipients.begin(), item.file_path);
+        } else if (item.type == NotificationQueueItem::Type::MENU) {
+            sendMenu(*item.recipients.begin());
         }
     }
 }

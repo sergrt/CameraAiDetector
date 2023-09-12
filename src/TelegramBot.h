@@ -17,12 +17,14 @@ struct NotificationQueueItem {
         MESSAGE,
         ON_DEMAND_PHOTO,
         ALARM_PHOTO,
-        PREVIEW
+        PREVIEW,
+        VIDEO,
+        MENU
     };
 
     Type type;
     std::string message;
-    std::string file_name;
+    std::filesystem::path file_path;
     std::set<uint64_t> recipients;
 };
 
@@ -44,34 +46,37 @@ public:
     void start();
     void stop();
 
-    // Post to sending queue
-    void postOnDemandPhoto(const std::string& file_name);
-    void postAlarmPhoto(const std::string& file_name);
+    // Post to sending queue - thread safe
+    void postOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
+    void postAlarmPhoto(const std::filesystem::path& file_path);  // No user id - goes to all users
     void postMessage(uint64_t user_id, const std::string& message);
-    void postVideoPreview(const std::string& file_name, const std::string& video_uid);
+    void postVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path);
+    void postVideo(uint64_t user_id, const std::filesystem::path& file_path);
+    void postMenu(uint64_t user_id);
 
-    bool someoneIswaitingForPhoto() const;
+    bool someoneIsWaitingForPhoto() const;
 
     static std::string videoCmdPrefix();
 
 private:
-    // Actual sending
-    void sendOnDemandPhoto(const std::string& file_name);
-    void sendAlarmPhoto(const std::string& file_name);
+    // Actual sending - should be called from one thread
+    void sendOnDemandPhoto(const std::filesystem::path& file_path);
+    void sendAlarmPhoto(const std::filesystem::path& file_path);
     void sendMessage(const std::set<uint64_t>& recipients, const std::string& message);
-    void sendVideoPreview(const std::string& file_name);
+    void sendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path);
+    void sendVideo(uint64_t recipient, const std::filesystem::path& file_path);
+    void sendMenu(uint64_t recipient);
 
     bool isUserAllowed(uint64_t user_id) const;
-    bool getCheckedFileFullPath(const std::string& file_name, std::filesystem::path& path) const;
 
     void pollThreadFunc();
     void queueThreadFunc();
 
-    void processVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
-    void processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
-    void processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
     void processOnDemandCmdImpl(uint64_t user_id);
     void processPingCmdImpl(uint64_t user_id);
+    void processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void processVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;
