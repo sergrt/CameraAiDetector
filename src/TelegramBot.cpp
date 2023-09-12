@@ -99,12 +99,43 @@ TgBot::InlineKeyboardMarkup::Ptr makeStartMenu() {
     return keyboard;
 }
 
-size_t getFileSize(const std::filesystem::path& file_name) {
+size_t getFileSizeMb(const std::filesystem::path& file_name) {
     return static_cast<size_t>(std::filesystem::file_size(file_name) / 1'000'000);
 }
 
 void logException(const std::string& description, const std::string& file, int line, const std::string& what) {
     LogError() << description << ": " << file << ":" << line << ": " << what;
+}
+
+std::string prepareStatusInfo(const std::filesystem::path& storage_path) {
+    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+    std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", cur_time);
+    timestamp = timestamp.substr(0, timestamp.find("."));
+
+    std::string freespace = std::to_string(static_cast<size_t>(std::filesystem::space(storage_path).available / 1'000'000));
+    for (auto i = static_cast<int>(freespace.size()) - 3; i > 0; i -= 3) {
+        freespace.insert(i, "'");
+    }
+
+    return timestamp + ", " + freespace + " MB free";
+}
+
+struct VideoFileInfo {
+    std::string uid;
+    size_t size_mb;
+};
+
+std::vector<VideoFileInfo> collectVideoFileUids(const std::filesystem::path& storage_path, const std::optional<Filter>& filter) {
+    std::vector<VideoFileInfo> files;
+    for (const auto& entry : std::filesystem::directory_iterator(storage_path)) {
+        if (VideoWriter::isVideoFile(entry.path())) {
+            const auto file_name = entry.path().filename().generic_string();
+            if (!filter || applyFilter(*filter, file_name)) {
+                files.emplace_back(getUidFromFileName(file_name), getFileSizeMb(entry));
+            }
+        }
+    }
+    return files;
 }
 
 }  // namespace
@@ -117,7 +148,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     bot_->getEvents().onCommand("start", [this](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; isUserAllowed(id)) {
             try {
-                if (!bot_->getApi().sendMessage(id, "Frequent commands", false, 0, makeStartMenu()))
+                if (!bot_->getApi().sendMessage(id, "Start here:", false, 0, makeStartMenu()))
                     LogError() << "/start reply send failed to user " << id;
             } catch (std::exception& e) {
                 logException("Exception while sending message", __FILE__, __LINE__, e.what());
@@ -216,52 +247,49 @@ void TelegramBot::processVideoCmdImpl(uint64_t user_id, const std::string& video
 }
 
 void TelegramBot::processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
-    bool any_preview_posted = false;
-    for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
-        if (VideoWriter::isVideoFile(entry.path())) {
-            const auto file_name = entry.path().filename().generic_string();
-            if (!filter || applyFilter(*filter, file_name)) {
-                const auto uid = getUidFromFileName(file_name);
-                postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
-                any_preview_posted = true;
-            }
-        }
-    }
-    if (any_preview_posted) {
-        postMessage(user_id, "Previews sending completed");
-    } else {
+    const auto files = collectVideoFileUids(storage_path_, filter);
+    if (files.empty()) {
         try {
             if (!bot_->getApi().sendMessage(user_id, "No files found"))
                 LogError() << "/previews reply send failed to user " << user_id;
         } catch (std::exception& e) {
             logException("Exception while sending message", __FILE__, __LINE__, e.what());
         }
+        return;
     }
+
+    for (const auto& file : files) {
+        const auto& uid = file.uid;
+        postVideoPreview(VideoWriter::generatePreviewFileName(uid), uid);
+    }
+    postMessage(user_id, "Previews sending completed");
 }
 
 void TelegramBot::processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
-    std::vector<std::string> commands_list;
-    
-    for (const auto& entry : std::filesystem::directory_iterator(storage_path_)) {
-        if (VideoWriter::isVideoFile(entry.path())) {
-            const auto file_name = entry.path().filename().generic_string();
-            if (!filter || applyFilter(*filter, file_name)) {
-                const auto file_size = getFileSize(entry);
-                std::string command = videoCmdPrefix() + getUidFromFileName(file_name) + " (" + std::to_string(file_size) + " MB)\n";
-                if (commands_list.empty() || commands_list.back().size() + command.size() > max_tg_message_len) {
-                    commands_list.emplace_back(std::move(command));
-                } else {
-                    commands_list.back() += command;
-                }
-            }
+    const auto files = collectVideoFileUids(storage_path_, filter);
+    if (files.empty()) {
+        try {
+            if (!bot_->getApi().sendMessage(user_id, "No files found"))
+                LogError() << "/videos reply send failed to user " << user_id;
+        } catch (std::exception& e) {
+            logException("Exception while sending message", __FILE__, __LINE__, e.what());
+        }
+        return;
+    }
+
+    std::vector<std::string> commands_messages;
+    for (const auto& file : files) {
+        std::string command = videoCmdPrefix() + file.uid + " (" + std::to_string(file.size_mb) + " MB)\n";
+        if (commands_messages.empty() || commands_messages.back().size() + command.size() > max_tg_message_len) {
+            commands_messages.emplace_back(std::move(command));
+        } else {
+            commands_messages.back() += command;
         }
     }
-    if (commands_list.empty())
-        commands_list.emplace_back("No files found");
 
-    for (const auto& cmd : commands_list) {
+    for (const auto& message : commands_messages) {
         try {
-            if (!bot_->getApi().sendMessage(user_id, cmd))
+            if (!bot_->getApi().sendMessage(user_id, message))
                 LogError() << "/videos reply send failed to user " << user_id;
         } catch (std::exception& e) {
             logException("Exception while sending message", __FILE__, __LINE__, e.what());
@@ -275,10 +303,9 @@ void TelegramBot::processOnDemandCmdImpl(uint64_t user_id) {
 }
 
 void TelegramBot::processPingCmdImpl(uint64_t user_id) {
-    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
-    const std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", cur_time);
+    const auto message = prepareStatusInfo(storage_path_);
     try {
-        if (!bot_->getApi().sendMessage(user_id, timestamp))
+        if (!bot_->getApi().sendMessage(user_id, message))
             LogError() << "/ping reply send failed to user " << user_id;
     } catch (std::exception& e) {
         logException("Exception while sending message", __FILE__, __LINE__, e.what());
@@ -364,7 +391,7 @@ void TelegramBot::sendVideoPreview(const std::string& file_name) {
         TgBot::InlineKeyboardButton::Ptr viewButton = std::make_shared<TgBot::InlineKeyboardButton>();
 
         const auto video_file = storage_path_ / VideoWriter::generateVideoFileName(getUidFromFileName(file_name));
-        viewButton->text = getHumanDateTime(file_name) + " (" + std::to_string(getFileSize(video_file)) + " MB)";
+        viewButton->text = getHumanDateTime(file_name) + " (" + std::to_string(getFileSizeMb(video_file)) + " MB)";
         viewButton->callbackData = cmd;
         keyboard->inlineKeyboard.push_back({viewButton});
 
