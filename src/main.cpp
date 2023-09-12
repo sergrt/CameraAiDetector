@@ -9,9 +9,6 @@ LogLevel app_log_level = LL_INFO;
 std::ostream* app_log_stream = nullptr;
 
 int main() {
-#ifdef _WINDOWS
-    setlocale(LC_ALL, "Russian");
-#endif
     std::cout << "Application start, enter \"q\" to quit" << std::endl;
 
     const Settings settings = loadSettings();
