@@ -116,8 +116,8 @@ std::string prepareStatusInfo(const std::filesystem::path& storage_path) {
     for (auto i = static_cast<int>(freespace.size()) - 3; i > 0; i -= 3) {
         freespace.insert(i, "'");
     }
-
-    return timestamp + ", " + freespace + " MB free";
+    // Some useful utf chars: &#9989; &#127909; &#128247; &#128680; &#128226; &#128266; &#10071; &#128681; &#8505; &#127916; &#127910; &#128064;
+    return "&#8505; " + timestamp + ", " + freespace + " MB free";
 }
 
 struct VideoFileInfo {
@@ -289,7 +289,7 @@ bool TelegramBot::someoneIsWaitingForPhoto() const {
 void TelegramBot::sendOnDemandPhoto(const std::filesystem::path& file_path) {
     if (std::filesystem::exists(file_path)) {
         const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto caption = file_path.filename().generic_string();
+        const auto caption = "&#128064; " + file_path.filename().generic_string();  // &#128064; - eyes
 
         std::set<uint64_t> recipients;
         {
@@ -299,7 +299,7 @@ void TelegramBot::sendOnDemandPhoto(const std::filesystem::path& file_path) {
 
         for (const auto& user : recipients) {
             try {
-                if (!bot_->getApi().sendPhoto(user, photo, caption))
+                if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
                     LogError() << "On-demand photo send failed to user " << user;
             } catch (std::exception& e) {
                 logException("Exception while sending photo", __FILE__, __LINE__, e.what());
@@ -311,10 +311,10 @@ void TelegramBot::sendOnDemandPhoto(const std::filesystem::path& file_path) {
 void TelegramBot::sendAlarmPhoto(const std::filesystem::path& file_path) {
     if (std::filesystem::exists(file_path)) {
         const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto caption = file_path.filename().generic_string();
+        const auto caption = "&#10071; " + file_path.filename().generic_string();  // &#10071; - red exclamation mark
         for (const auto& user : allowed_users_) {
             try {
-                if (!bot_->getApi().sendPhoto(user, photo, caption))
+                if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
                     LogError() << "Alarm photo send failed to user " << user;
             } catch (std::exception& e) {
                 logException("Exception while sending photo", __FILE__, __LINE__, e.what());
@@ -326,7 +326,7 @@ void TelegramBot::sendAlarmPhoto(const std::filesystem::path& file_path) {
 void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::string& message) {
     for (const auto& user : recipients) {
         try {
-            if (!bot_->getApi().sendMessage(user, message))
+            if (!bot_->getApi().sendMessage(user, message, false, 0, nullptr, "HTML"))
                 LogError() << "Message send failed to user " << user;
         } catch (std::exception& e) {
             logException("Exception while sending message", __FILE__, __LINE__, e.what());
@@ -363,10 +363,10 @@ void TelegramBot::sendVideoPreview(const std::set<uint64_t>& recipients, const s
 void TelegramBot::sendVideo(uint64_t recipient, const std::filesystem::path& file_path) {
     if (std::filesystem::exists(file_path)) {
         const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-        const auto caption = file_path.filename().generic_string();
+        const auto caption = "&#127910; " + file_path.filename().generic_string();  // &#127910; - video camera
 
         try {
-            if (!bot_->getApi().sendVideo(recipient, video, false, 0, 0, 0, "", caption))
+            if (!bot_->getApi().sendVideo(recipient, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
                 LogError() << "Video file " << file_path << " send failed to user " << recipient;
         } catch (std::exception& e) {
             logException("Exception while sending video", __FILE__, __LINE__, e.what());
@@ -376,7 +376,7 @@ void TelegramBot::sendVideo(uint64_t recipient, const std::filesystem::path& fil
 
 void TelegramBot::sendMenu(uint64_t recipient) {
     try {
-        if (!bot_->getApi().sendMessage(recipient, "Start here", false, 0, makeStartMenu()))
+        if (!bot_->getApi().sendMessage(recipient, "&#9995; Start here", false, 0, makeStartMenu(), "HTML"))
             LogError() << "/start reply send failed to user " << recipient;
     } catch (std::exception& e) {
         logException("Exception while sending menu", __FILE__, __LINE__, e.what());
