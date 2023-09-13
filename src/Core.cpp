@@ -52,10 +52,10 @@ void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
 }
 
 std::filesystem::path Core::saveVideoPreview(const std::string& video_file_uid) {
-    const auto file_name = VideoWriter::generatePreviewFileName(video_file_uid);
+    const auto file_name = VideoWriter::GeneratePreviewFileName(video_file_uid);
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
     const auto path = settings_.storage_path / file_name;
-    if (!cv::imwrite(path.generic_string(), video_writer_->getPreviewImage(), img_encode_param))
+    if (!cv::imwrite(path.generic_string(), video_writer_->GetPreviewImage(), img_encode_param))
         LogError() << "Error write video preview image, path = " << path;
     return path;
 }
@@ -94,7 +94,7 @@ void Core::processingThreadFunc() {
         if (!check_frame) {
             if (video_writer_) {
                 LogTrace() << "Detect not called, just write";
-                video_writer_->write(frame);
+                video_writer_->Write(frame);
             }
         }
 
@@ -109,7 +109,7 @@ void Core::processingThreadFunc() {
                 LogError() << "Frame encoding failed";
                 continue;
             }
-            const auto detect_result = ai_facade_.detect(img_buffer.data(), img_buffer.size());
+            const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
             LogTrace() << "Detect result: " << detect_result;
 
             if (!detect_result.empty() && detect_result["success"] == true && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
@@ -121,8 +121,8 @@ void Core::processingThreadFunc() {
                 if (!video_writer_)
                     initVideoWriter();
 
-                video_writer_->write(frame);
-                const auto video_uid = video_writer_->getUid();
+                video_writer_->Write(frame);
+                const auto video_uid = video_writer_->GetUid();
                 if (video_uid != last_alarm_video_uid_ || isAlarmImageDelayPassed()) {
                     auto& alarm_frame = (settings_.use_image_scale ? scaled_frame : frame);
                     drawBoxes(alarm_frame, detect_result["predictions"]);
@@ -131,7 +131,7 @@ void Core::processingThreadFunc() {
                 }
             } else {  // Not detected
                 if (video_writer_) {
-                    video_writer_->write(frame);
+                    video_writer_->Write(frame);
 
                     if (!first_cooldown_frame_timestamp_) {
                         LogInfo() << "Start cooldown writing";
@@ -139,7 +139,7 @@ void Core::processingThreadFunc() {
                     } else {
                         LogTrace() << "Cooldown frame saved";
                         if (isCooldownFinished()) {
-                            const auto uid = video_writer_->getUid();
+                            const auto uid = video_writer_->GetUid();
                             LogInfo() << "Finish writing file with uid = " << uid;
                             if (const auto preview_file_path = saveVideoPreview(uid); settings_.send_video_previews)
                                 postVideoPreview(preview_file_path);

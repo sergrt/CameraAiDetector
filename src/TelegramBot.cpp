@@ -128,7 +128,7 @@ struct VideoFileInfo {
 std::vector<VideoFileInfo> collectVideoFileUids(const std::filesystem::path& storage_path, const std::optional<Filter>& filter) {
     std::vector<VideoFileInfo> files;
     for (const auto& entry : std::filesystem::directory_iterator(storage_path)) {
-        if (VideoWriter::isVideoFile(entry.path())) {
+        if (VideoWriter::IsVideoFile(entry.path())) {
             const auto file_name = entry.path().filename().generic_string();
             if (!filter || applyFilter(*filter, file_name)) {
                 files.emplace_back(getUidFromFileName(file_name), getFileSizeMb(entry));
@@ -250,7 +250,7 @@ void TelegramBot::processPreviewsCmdImpl(uint64_t user_id, const std::optional<F
     }
 
     for (const auto& file : files) {
-        const std::filesystem::path file_path = storage_path_ / VideoWriter::generatePreviewFileName(file.uid);
+        const std::filesystem::path file_path = storage_path_ / VideoWriter::GeneratePreviewFileName(file.uid);
         postVideoPreview(user_id, file_path);
     }
     postMessage(user_id, "Previews sending completed");
@@ -263,7 +263,7 @@ void TelegramBot::processVideoCmdImpl(uint64_t user_id, const std::string& video
         return;
     }
 
-    const std::filesystem::path file_path = storage_path_ / VideoWriter::generateVideoFileName(video_uid);
+    const std::filesystem::path file_path = storage_path_ / VideoWriter::GenerateVideoFileName(video_uid);
     LogInfo() << "File uid: " << video_uid << ", full path: " << file_path;
 
     if (std::filesystem::exists(file_path)) {
@@ -337,7 +337,7 @@ void TelegramBot::sendMessage(const std::set<uint64_t>& recipients, const std::s
 void TelegramBot::sendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path) {
     const auto file_name = file_path.filename().generic_string();
     const auto uid = getUidFromFileName(file_name);
-    const auto video_file_path = storage_path_ / VideoWriter::generateVideoFileName(uid);
+    const auto video_file_path = storage_path_ / VideoWriter::GenerateVideoFileName(uid);
     if (std::filesystem::exists(file_path) && std::filesystem::exists(video_file_path)) {
         const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
         const auto cmd = videoCmdPrefix() + uid;
