@@ -8,14 +8,14 @@
 #include <string>
 
 // UID is a timestamp
-inline std::string generateUid() {
+inline std::string GenerateUid() {
     const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
     std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", cur_time);
     timestamp.replace(timestamp.find('.'), 1, "_");
     return timestamp;
 }
 
-inline std::chrono::time_point<std::chrono::system_clock> getTimestampFromUid(const std::string& uid) {
+inline std::chrono::time_point<std::chrono::system_clock> GetTimestampFromUid(const std::string& uid) {
     std::tm tm = {};
     const auto us_delim_pos = uid.find('_');
     std::stringstream sstream(uid.substr(0, us_delim_pos));
@@ -34,14 +34,14 @@ inline std::chrono::time_point<std::chrono::system_clock> getTimestampFromUid(co
     return tp;
 }
 
-inline std::string generateFileName(const std::string& prefix, std::string* uid = nullptr) {
-    const auto id = generateUid();
+inline std::string GenerateFileName(const std::string& prefix, std::string* uid = nullptr) {
+    const auto id = GenerateUid();
     if (uid)
         *uid = id;
     return prefix + id;
 }
 
-inline std::string getUidFromFileName(const std::string& file_name) {
+inline std::string GetUidFromFileName(const std::string& file_name) {
     const auto dot_pos = file_name.rfind('.');
     if (dot_pos == std::string::npos)
         return {};
@@ -59,14 +59,14 @@ inline std::string getUidFromFileName(const std::string& file_name) {
     return file_name.substr(start, dot_pos - start);
 }
 
-inline bool isUidValid(const std::string& uid) {
+inline bool IsUidValid(const std::string& uid) {
     static const auto uid_regex = std::regex(R"(^20[2|3]\d(0[1-9]|1[012])(0[1-9]|[12][0-9]|3[01])T(2[0-3]|[01][0-9])[0-5][0-9][0-5][0-9]_\d{7}$)");
     std::smatch match;
     return std::regex_match(uid, match, uid_regex);
 }
 
-inline std::string getHumanDateTime(const std::string& file_name) {
-    const auto timestamp = getTimestampFromUid(getUidFromFileName(file_name));
+inline std::string GetHumanDateTime(const std::string& file_name) {
+    const auto timestamp = GetTimestampFromUid(GetUidFromFileName(file_name));
     auto tp_zoned = std::chrono::zoned_time{std::chrono::current_zone(), timestamp};
     std::string str = std::format("{:%d-%m-%Y %H:%M:%S}", tp_zoned);
     str.erase(begin(str) + str.find('.'), end(str));

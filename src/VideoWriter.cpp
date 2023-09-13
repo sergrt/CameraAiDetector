@@ -23,7 +23,7 @@ cv::Mat CreateEmptyPreview() {
 }  // namespace
 
 VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties) {
-    const auto file_name = generateFileName(kVideoFilePrefix, &uid_) + kVideoFileExtension;
+    const auto file_name = GenerateFileName(kVideoFilePrefix, &uid_) + kVideoFileExtension;
     if (!writer_.open((storage_path / file_name).generic_string(), kFourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
         LogError() << msg;

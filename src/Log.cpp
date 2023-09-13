@@ -7,50 +7,50 @@
 #include <stdexcept>
 #include <string>
 
+const std::map<LogLevel, std::string> kLevelToStr = {
+    {kTrace,   "[TRACE]"},
+    {kDebug,   "[DEBUG]"},
+    {kInfo,    "[INFO ]"},
+    {kWarning, "[WARN ]"},
+    {kError,   "[ERROR]"}
+};
+
+const std::map<std::string, LogLevel> kStrToLevel = {
+    {"TRACE",   kTrace},
+    {"DEBUG",   kDebug},
+    {"INFO",    kInfo},
+    {"WARN",    kWarning},
+    {"WARNING", kWarning},
+    {"ERROR",   kError}
+};
+
 namespace {
 
-const std::map<LogLevel, std::string> levelToStr = {
-    {LL_TRACE,   "[TRACE]"},
-    {LL_DEBUG,   "[DEBUG]"},
-    {LL_INFO,    "[INFO ]"},
-    {LL_WARNING, "[WARN ]"},
-    {LL_ERROR,   "[ERROR]"}
-};
-
-const std::map<std::string, LogLevel> strToLevel = {
-    {"TRACE",   LL_TRACE},
-    {"DEBUG",   LL_DEBUG},
-    {"INFO",    LL_INFO},
-    {"WARN",    LL_WARNING},
-    {"WARNING", LL_WARNING},
-    {"ERROR",   LL_ERROR}
-};
-
-std::string logLevelToString(LogLevel log_level) {
-    const auto it = levelToStr.find(log_level);
-    if (it == end(levelToStr))
+std::string LogLevelToString(LogLevel log_level) {
+    const auto it = kLevelToStr.find(log_level);
+    if (it == end(kLevelToStr))
         throw std::runtime_error("Unknown log level value specified");
     return it->second;
 }
 
 }  // namespace
 
-LogLevel stringToLogLevel(const std::string& str) {
-    const auto it = strToLevel.find(to_upper(str));
-    if (it == end(strToLevel))
+LogLevel StringToLogLevel(const std::string& str) {
+    const auto it = kStrToLevel.find(ToUpper(str));
+    if (it == end(kStrToLevel))
         throw std::runtime_error("Unknown log level string specified");
     return it->second;
 }
 
 Log::Log(LogLevel level)
-    : stream_(std::osyncstream(*app_log_stream))
+    : stream_(std::osyncstream(*kAppLogStream))
     , log_level_(level) {
     
-    if (checkLevel()) {
+    if (CheckLevel()) {
         something_written_ = true;
 
-        logTimestamp();
-        logLevel();
+        WriteTimestamp();
+        WriteLevel();
     }
 }
 
@@ -61,16 +61,16 @@ Log::~Log() {
     }
 }
 
-bool Log::checkLevel() const {
-    return log_level_ >= app_log_level;
+bool Log::CheckLevel() const {
+    return log_level_ >= kAppLogLevel;
 }
 
-void Log::logTimestamp() {
+void Log::WriteTimestamp() {
     const auto now = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
     const std::string timestamp = std::format("{:%Y%m%dT%H%M%S}", now);
     stream_ << timestamp << " ";
 }
 
-void Log::logLevel() {
-    stream_ << logLevelToString(log_level_) << " ";
+void Log::WriteLevel() {
+    stream_ << LogLevelToString(log_level_) << " ";
 }

@@ -5,25 +5,25 @@
 
 #include <memory>
 
-LogLevel app_log_level = LL_INFO;
-std::ostream* app_log_stream = nullptr;
+LogLevel kAppLogLevel = LogLevel::kInfo;
+std::ostream* kAppLogStream = nullptr;
 
 int main() {
     std::cout << "Application start, enter \"q\" to quit" << std::endl;
 
-    const Settings settings = loadSettings();
+    const Settings settings = LoadSettings();
 
-    app_log_level = static_cast<LogLevel>(settings.log_level);
+    kAppLogLevel = static_cast<LogLevel>(settings.log_level);
     if (settings.log_filename.empty()) {
-        app_log_stream = &std::cout;
+        kAppLogStream = &std::cout;
     } else {
-        app_log_stream = new std::ofstream(settings.log_filename);
+        kAppLogStream = new std::ofstream(settings.log_filename);
     }
 
     auto _ = FinalAction([] {
-        if (app_log_stream != &std::cout) {
+        if (kAppLogStream != &std::cout) {
             LogTrace() << "Delete file stream";
-            delete app_log_stream;
+            delete kAppLogStream;
         }
     });
 

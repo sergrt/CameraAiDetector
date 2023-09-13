@@ -14,13 +14,13 @@
 // TODO: Use visitor pattern with different item types to get rid of unused fields for certain items
 struct NotificationQueueItem {
     enum class Type {
-        MESSAGE,
-        ON_DEMAND_PHOTO,
-        ALARM_PHOTO,
-        PREVIEW,
-        VIDEO,
-        MENU,
-        ANSWER
+        kMessage,
+        kOnDemandPhoto,
+        kAlarmPhoto,
+        kPreview,
+        kVideo,
+        kMenu,
+        kAnswer
     };
 
     Type type;
@@ -44,42 +44,42 @@ public:
     TelegramBot& operator=(const TelegramBot&) = delete;
     TelegramBot& operator=(TelegramBot&&) = delete;
 
-    void start();
-    void stop();
+    void Start();
+    void Stop();
 
     // Post to sending queue - thread safe
-    void postOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
-    void postAlarmPhoto(const std::filesystem::path& file_path);  // No user id - goes to all users
-    void postMessage(uint64_t user_id, const std::string& message);
-    void postVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path);
-    void postVideo(uint64_t user_id, const std::filesystem::path& file_path);
-    void postMenu(uint64_t user_id);
-    void postAnswerCallback(const std::string& callback_id);
+    void PostOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
+    void PostAlarmPhoto(const std::filesystem::path& file_path);  // No user id - goes to all users
+    void PostMessage(uint64_t user_id, const std::string& message);
+    void PostVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path);
+    void PostVideo(uint64_t user_id, const std::filesystem::path& file_path);
+    void PostMenu(uint64_t user_id);
+    void PostAnswerCallback(const std::string& callback_id);
 
-    bool someoneIsWaitingForPhoto() const;
+    bool SomeoneIsWaitingForPhoto() const;
 
-    static std::string videoCmdPrefix();
+    static std::string VideoCmdPrefix();
 
 private:
     // Actual sending - should be called from one thread
-    void sendOnDemandPhoto(const std::filesystem::path& file_path);
-    void sendAlarmPhoto(const std::filesystem::path& file_path);
-    void sendMessage(const std::set<uint64_t>& recipients, const std::string& message);
-    void sendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path);
-    void sendVideo(uint64_t recipient, const std::filesystem::path& file_path);
-    void sendMenu(uint64_t recipient);
-    void sendAnswer(const std::string& callback_id);
+    void SendOnDemandPhoto(const std::filesystem::path& file_path);
+    void SendAlarmPhoto(const std::filesystem::path& file_path);
+    void SendMessage(const std::set<uint64_t>& recipients, const std::string& message);
+    void SendVideoPreview(const std::set<uint64_t>& recipients, const std::filesystem::path& file_path);
+    void SendVideo(uint64_t recipient, const std::filesystem::path& file_path);
+    void SendMenu(uint64_t recipient);
+    void SendAnswer(const std::string& callback_id);
 
-    bool isUserAllowed(uint64_t user_id) const;
+    bool IsUserAllowed(uint64_t user_id) const;
 
-    void pollThreadFunc();
-    void queueThreadFunc();
+    void PollThreadFunc();
+    void QueueThreadFunc();
 
-    void processOnDemandCmdImpl(uint64_t user_id);
-    void processPingCmdImpl(uint64_t user_id);
-    void processVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
-    void processPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
-    void processVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
+    void ProcessOnDemandCmdImpl(uint64_t user_id);
+    void ProcessPingCmdImpl(uint64_t user_id);
+    void ProcessVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void ProcessPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
+    void ProcessVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;

@@ -7,8 +7,8 @@
 #include <string>
 
 enum class BufferOverflowStrategy {
-    Delay,  // Delay if buffer size is too big. Useful with media files
-    DropHalf  // Drop half of buffer
+    kDelay,  // Delay if buffer size is too big. Useful with media files
+    kDropHalf  // Drop half of buffer
 };
 
 struct Settings {
@@ -19,8 +19,7 @@ struct Settings {
     size_t delay_after_error_ms = 2'000;  // Delay after frame obtain error
     size_t cooldown_write_time_ms = 5'000;  // Time to write after object became not detected - align this with telegram alarm notification
 
-    
-    BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::Delay;
+    BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::kDelay;
 
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
     std::string min_confidence = "0.4";  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
@@ -37,8 +36,8 @@ struct Settings {
     bool send_video_previews = true;  // Send video preview as soon as video has been recorded
 
     // Log options
-    int log_level = LogLevel::LL_INFO;  // Log level
+    int log_level = LogLevel::kInfo;  // Log level
     std::string log_filename = "debug.log";  // empty string for cout
 };
 
-Settings loadSettings();
+Settings LoadSettings();

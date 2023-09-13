@@ -13,21 +13,21 @@ Core::Core(Settings settings)
       frame_reader_(settings_.source),
       bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users),
       ai_facade_(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format) {
-    bot_.start();
+    bot_.Start();
     frame_reader_.Open();
 }
 
 Core::~Core() {
-    bot_.stop();
+    bot_.Stop();
     Stop();
 }
 
 void Core::PostOnDemandPhoto(const cv::Mat& frame) {
-    const auto file_name = generateFileName("on_demand_") + ".jpg";
+    const auto file_name = GenerateFileName("on_demand_") + ".jpg";
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
         LogError() << "Error write on-demand photo, path = " << path;
-    bot_.postOnDemandPhoto(path);
+    bot_.PostOnDemandPhoto(path);
 }
 
 void Core::InitVideoWriter() {
@@ -38,11 +38,11 @@ void Core::InitVideoWriter() {
 
 void Core::PostAlarmPhoto(const cv::Mat& frame) {
     last_alarm_photo_sent_ = std::chrono::steady_clock::now();
-    const auto file_name = generateFileName("alarm_") + ".jpg";
+    const auto file_name = GenerateFileName("alarm_") + ".jpg";
     const auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), frame))
         LogError() << "Error write alarm photo, path = " << path;
-    bot_.postAlarmPhoto(path);
+    bot_.PostAlarmPhoto(path);
 } 
 
 void Core::DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
@@ -54,14 +54,14 @@ void Core::DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
 std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) {
     const auto file_name = VideoWriter::GeneratePreviewFileName(video_file_uid);
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
-    const auto path = settings_.storage_path / file_name;
+    auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), video_writer_->GetPreviewImage(), img_encode_param))
         LogError() << "Error write video preview image, path = " << path;
     return path;
 }
 
 void Core::PostVideoPreview(const std::filesystem::path& file_path) {
-    bot_.postVideoPreview({}, file_path);
+    bot_.PostVideoPreview({}, file_path);
 }
 
 void Core::ProcessingThreadFunc() {
@@ -85,7 +85,7 @@ void Core::ProcessingThreadFunc() {
         buffer_.pop_front();
         lock.unlock();
 
-        if (bot_.someoneIsWaitingForPhoto())
+        if (bot_.SomeoneIsWaitingForPhoto())
             PostOnDemandPhoto(frame);
 
         static uint64_t i = 0;
@@ -105,7 +105,7 @@ void Core::ProcessingThreadFunc() {
             if (settings_.use_image_scale)
                 cv::resize(frame, scaled_frame, scaled_size);
 
-            if (!cv::imencode(img_format, (settings_.use_image_scale ? scaled_frame : frame), img_buffer, img_encode_param)) {
+            if (!cv::imencode(img_format, settings_.use_image_scale ? scaled_frame : frame, img_buffer, img_encode_param)) {
                 LogError() << "Frame encoding failed";
                 continue;
             }
@@ -124,7 +124,7 @@ void Core::ProcessingThreadFunc() {
                 video_writer_->Write(frame);
                 const auto video_uid = video_writer_->GetUid();
                 if (video_uid != last_alarm_video_uid_ || IsAlarmImageDelayPassed()) {
-                    auto& alarm_frame = (settings_.use_image_scale ? scaled_frame : frame);
+                    auto& alarm_frame = settings_.use_image_scale ? scaled_frame : frame;
                     DrawBoxes(alarm_frame, detect_result["predictions"]);
                     PostAlarmPhoto(alarm_frame);
                     last_alarm_video_uid_ = video_uid;
@@ -195,10 +195,10 @@ void Core::CaptureThreadFunc() {
             }
 
             if (buffer_size > kMaxBufferSize) {
-                if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::Delay) {
+                if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDelay) {
                     LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), delay capture";
                     std::this_thread::sleep_for(kBufferOverflowDelay);
-                } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::DropHalf) {
+                } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDropHalf) {
                     LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), dropping half of cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
