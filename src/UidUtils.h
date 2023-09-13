@@ -21,6 +21,7 @@ inline std::chrono::time_point<std::chrono::system_clock> getTimestampFromUid(co
     std::stringstream sstream(uid.substr(0, us_delim_pos));
     sstream >> std::get_time(&tm, "%Y%m%dT%H%M%S");
     auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    /* TODO: consider this is necessary
     const auto usec_part = uid.substr(us_delim_pos + 1, uid.size() - us_delim_pos - 1);
 
     auto count = std::strtol(usec_part.c_str(), nullptr, 10);
@@ -28,7 +29,8 @@ inline std::chrono::time_point<std::chrono::system_clock> getTimestampFromUid(co
         count = 0;  // We're ok with 0 here
     }
 
-    //tp += std::chrono::microseconds(count);
+    tp += std::chrono::microseconds(count);  // Double check this
+    */
     return tp;
 }
 
