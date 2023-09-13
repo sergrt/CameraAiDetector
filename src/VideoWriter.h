@@ -12,14 +12,14 @@ class VideoWriter final {
 public:
     VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties);
 
-    void write(const cv::Mat& frame);
+    void Write(const cv::Mat& frame);
 
-    std::string getUid() const;
-    cv::Mat getPreviewImage() const;
+    std::string GetUid() const;
+    cv::Mat GetPreviewImage() const;
 
-    static bool isVideoFile(const std::filesystem::path& file);
-    static std::string generatePreviewFileName(const std::string& uid);
-    static std::string generateVideoFileName(const std::string& uid);
+    static bool IsVideoFile(const std::filesystem::path& file);
+    static std::string GeneratePreviewFileName(const std::string& uid);
+    static std::string GenerateVideoFileName(const std::string& uid);
 
 private:
     cv::VideoWriter writer_;

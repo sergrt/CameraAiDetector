@@ -5,16 +5,16 @@
 
 #include <stdexcept>
 
-const auto fourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
-constexpr size_t initial_buffer_size = 120;  // Some reasonable value to fit frames without reallocate too often
-constexpr auto preview_sampling_time = std::chrono::milliseconds(2000);  // TODO: consider move to config
-constexpr size_t preview_images = 9;  // 3x3 grid. Should be square number
-constexpr auto video_file_prefix = "v_";
-constexpr auto video_file_extension = ".mp4";
+const auto kFourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
+constexpr size_t kInitialBufferSize = 120;  // Some reasonable value to fit frames without reallocate too often
+constexpr auto kPreviewSamplingTime = std::chrono::milliseconds(2000);  // TODO: consider move to config
+constexpr size_t kPreviewImages = 9;  // 3x3 grid. Should be square number
+constexpr auto kVideoFilePrefix = "v_";
+constexpr auto kVideoFileExtension = ".mp4";
 
 namespace {
 
-cv::Mat createEmptyPreview() {
+cv::Mat CreateEmptyPreview() {
     cv::Mat empty = cv::Mat::zeros(cv::Size(350, 80), CV_8UC1);
     cv::putText(empty, "No preview available", cv::Point(20, 50), 0, 0.8, cv::Scalar(255.0, 255.0, 255.0), 1);
     return empty;
@@ -23,58 +23,72 @@ cv::Mat createEmptyPreview() {
 }  // namespace
 
 VideoWriter::VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& stream_properties) {
-    const auto file_name = generateFileName(video_file_prefix, &uid_) + video_file_extension;
-    if (!writer_.open((storage_path / file_name).generic_string(), fourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
+    const auto file_name = generateFileName(kVideoFilePrefix, &uid_) + kVideoFileExtension;
+    if (!writer_.open((storage_path / file_name).generic_string(), kFourcc, stream_properties.fps, cv::Size(stream_properties.width, stream_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
         LogError() << msg;
         throw std::runtime_error(msg);
     }
     LogInfo() << "Video writer opened file with uid = " << uid_;
     last_frame_time_ = std::chrono::steady_clock::now();
-    preview_frames_.reserve(initial_buffer_size);
+    preview_frames_.reserve(kInitialBufferSize);
 }
 
-bool VideoWriter::isVideoFile(const std::filesystem::path& file) {
-    return file.extension() == video_file_extension;
+bool VideoWriter::IsVideoFile(const std::filesystem::path& file) {
+    return file.extension() == kVideoFileExtension;
 }
 
-std::string VideoWriter::generatePreviewFileName(const std::string& uid) {
+std::string VideoWriter::GeneratePreviewFileName(const std::string& uid) {
     return "preview_" + uid + ".jpg";
 }
 
-std::string VideoWriter::generateVideoFileName(const std::string& uid) {
-    return video_file_prefix + uid + video_file_extension;
+std::string VideoWriter::GenerateVideoFileName(const std::string& uid) {
+    return kVideoFilePrefix + uid + kVideoFileExtension;
 }
 
-void VideoWriter::write(const cv::Mat& frame) {
+void VideoWriter::Write(const cv::Mat& frame) {
     writer_.write(frame);
 
-    if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_time) {
+    if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= kPreviewSamplingTime) {
         last_frame_time_ = cur_time;
         preview_frames_.push_back(frame);
         // TODO: check size to prevent mem issues
     }
 }
 
-cv::Mat VideoWriter::getPreviewImage() const {
+cv::Mat VideoWriter::GetPreviewImage() const {
     if (preview_frames_.empty()) {
         LogWarning() << "Preview frames buffer is empty";
-        return createEmptyPreview();
+        return CreateEmptyPreview();
     }
 
-    const double step = static_cast<double>(preview_frames_.size()) / preview_images;
-    LogInfo() << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
+    std::vector<int> indexes(kPreviewImages, -1);
+    const auto preview_frames_size = preview_frames_.size();
+    const size_t images_count = std::min(preview_frames_size, kPreviewImages);
+    const double step = static_cast<double>(preview_frames_size) / images_count;
+    for (size_t i = 0; i < images_count; ++i) {
+        if (images_count == preview_frames_size) {
+            indexes[i] = i;
+        } else {
+            indexes[i] = static_cast<size_t>(step * i);
+        }
+    }
+
+    LogInfo() << "Preview frames count = " << preview_frames_size << ", indexes = " << indexes;
 
     std::vector<cv::Mat> rows;
-    const auto images_in_row = static_cast<int>(std::sqrt(preview_images));
-    for (size_t i = 0; i < preview_images; ++i) {
-        const auto idx = static_cast<size_t>(step * i);
+    const auto images_in_row = static_cast<int>(std::sqrt(kPreviewImages));
+    const cv::Mat empty_frame = cv::Mat::zeros(preview_frames_[0].size(), CV_8UC1);
+    for (size_t i = 0, sz = indexes.size(); i < sz; ++i) {
+        const auto idx = indexes[i];
+        const auto frame = idx == -1 ? empty_frame : preview_frames_[idx];
+
         if (i % images_in_row == 0) {
-            LogDebug() << "Add row, idx = " << idx;
-            rows.push_back(preview_frames_[idx]);
+            LogDebug() << "Add row, i = " << i;
+            rows.push_back(frame);
         } else {
             auto& row = rows.back();
-            cv::hconcat(row, preview_frames_[idx], row);
+            cv::hconcat(row, frame, row);
         }
     }
 
@@ -91,6 +105,6 @@ cv::Mat VideoWriter::getPreviewImage() const {
     return resized_res;
 }
 
-std::string VideoWriter::getUid() const {
+std::string VideoWriter::GetUid() const {
     return uid_;
 }

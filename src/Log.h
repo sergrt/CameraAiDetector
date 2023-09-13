@@ -1,6 +1,7 @@
 #pragma once
 
 #include <syncstream>
+#include <vector>
 
 enum LogLevel {
     // Prefixes because of names clash on Windows
@@ -37,6 +38,18 @@ public:
     Log& operator<<(const bool data) {
         if (checkLevel())
             stream_ << (data ? "true" : "false");
+
+        return *this;
+    }
+
+    template <typename T>
+    Log& operator<<(const std::vector<T>& data) {
+        if (checkLevel()) {
+            stream_ << "[ ";
+            for (const auto& v : data)
+                stream_ << v << " ";
+            stream_ << "]";
+        };
 
         return *this;
     }
