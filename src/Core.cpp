@@ -14,7 +14,7 @@ Core::Core(Settings settings)
       bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users),
       ai_facade_(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format) {
     bot_.start();
-    frame_reader_.open();
+    frame_reader_.Open();
 }
 
 Core::~Core() {
@@ -32,7 +32,7 @@ void Core::PostOnDemandPhoto(const cv::Mat& frame) {
 
 void Core::InitVideoWriter() {
     LogInfo() << "Init video writer";
-    const auto stream_properties = frame_reader_.getStreamProperties();
+    const auto stream_properties = frame_reader_.GetStreamProperties();
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, stream_properties);
 }
 
@@ -66,8 +66,8 @@ void Core::PostVideoPreview(const std::filesystem::path& file_path) {
 
 void Core::ProcessingThreadFunc() {
     const auto scaled_size = cv::Size(
-        static_cast<int>(frame_reader_.getStreamProperties().width * settings_.img_scale_x),
-        static_cast<int>(frame_reader_.getStreamProperties().height * settings_.img_scale_y));
+        static_cast<int>(frame_reader_.GetStreamProperties().width * settings_.img_scale_x),
+        static_cast<int>(frame_reader_.GetStreamProperties().height * settings_.img_scale_y));
     const auto img_format = "." + settings_.img_format;
 
     // TODO: Check performance impact with different image quality
@@ -165,14 +165,14 @@ bool Core::IsAlarmImageDelayPassed() const {
 void Core::CaptureThreadFunc() {
     while (!stop_) {
         cv::Mat frame;
-        if (!frame_reader_.getFrame(frame)) {
+        if (!frame_reader_.GetFrame(frame)) {
             ++get_frame_error_count_;
             LogError() << "Can't get frame";
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
                 LogInfo() << "Reconnect";
                 get_frame_error_count_ = 0;
-                frame_reader_.reconnect();
+                frame_reader_.Reconnect();
             } else {
                 LogInfo() << "Delay after error, error count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
