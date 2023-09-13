@@ -3,10 +3,10 @@
 #include "Log.h"
 #include "UidUtils.h"
 
-const cv::Scalar frame_color = cv::Scalar(0.0, 0.0, 200.0);
-constexpr int frame_width = 2;
-constexpr size_t max_buffer_size = 500u;  // Approx 20 sec of 25 fps stream
-constexpr auto buffer_overflow_delay = std::chrono::seconds(1);
+const cv::Scalar kFrameColor = cv::Scalar(0.0, 0.0, 200.0);
+constexpr int kFrameWidth = 2;
+constexpr size_t kMaxBufferSize = 500u;  // Approx 20 sec of 25 fps stream
+constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 
 Core::Core(Settings settings)
     : settings_(std::move(settings)),
@@ -19,10 +19,10 @@ Core::Core(Settings settings)
 
 Core::~Core() {
     bot_.stop();
-    stop();
+    Stop();
 }
 
-void Core::postOnDemandPhoto(const cv::Mat& frame) {
+void Core::PostOnDemandPhoto(const cv::Mat& frame) {
     const auto file_name = generateFileName("on_demand_") + ".jpg";
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
@@ -30,13 +30,13 @@ void Core::postOnDemandPhoto(const cv::Mat& frame) {
     bot_.postOnDemandPhoto(path);
 }
 
-void Core::initVideoWriter() {
+void Core::InitVideoWriter() {
     LogInfo() << "Init video writer";
     const auto stream_properties = frame_reader_.getStreamProperties();
     video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, stream_properties);
 }
 
-void Core::postAlarmPhoto(const cv::Mat& frame) {
+void Core::PostAlarmPhoto(const cv::Mat& frame) {
     last_alarm_photo_sent_ = std::chrono::steady_clock::now();
     const auto file_name = generateFileName("alarm_") + ".jpg";
     const auto path = settings_.storage_path / file_name;
@@ -45,13 +45,13 @@ void Core::postAlarmPhoto(const cv::Mat& frame) {
     bot_.postAlarmPhoto(path);
 } 
 
-void Core::drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
+void Core::DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
     for (const auto& prediction : predictions) {
-        cv::rectangle(frame, cv::Point(prediction["x_min"], prediction["y_min"]), cv::Point(prediction["x_max"], prediction["y_max"]), frame_color, frame_width);
+        cv::rectangle(frame, cv::Point(prediction["x_min"], prediction["y_min"]), cv::Point(prediction["x_max"], prediction["y_max"]), kFrameColor, kFrameWidth);
     }
 }
 
-std::filesystem::path Core::saveVideoPreview(const std::string& video_file_uid) {
+std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) {
     const auto file_name = VideoWriter::GeneratePreviewFileName(video_file_uid);
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
     const auto path = settings_.storage_path / file_name;
@@ -60,11 +60,11 @@ std::filesystem::path Core::saveVideoPreview(const std::string& video_file_uid) 
     return path;
 }
 
-void Core::postVideoPreview(const std::filesystem::path& file_path) {
+void Core::PostVideoPreview(const std::filesystem::path& file_path) {
     bot_.postVideoPreview({}, file_path);
 }
 
-void Core::processingThreadFunc() {
+void Core::ProcessingThreadFunc() {
     const auto scaled_size = cv::Size(
         static_cast<int>(frame_reader_.getStreamProperties().width * settings_.img_scale_x),
         static_cast<int>(frame_reader_.getStreamProperties().height * settings_.img_scale_y));
@@ -86,7 +86,7 @@ void Core::processingThreadFunc() {
         lock.unlock();
 
         if (bot_.someoneIsWaitingForPhoto())
-            postOnDemandPhoto(frame);
+            PostOnDemandPhoto(frame);
 
         static uint64_t i = 0;
         const bool check_frame = (i++ % settings_.nth_detect_frame == 0);
@@ -119,14 +119,14 @@ void Core::processingThreadFunc() {
                 }
 
                 if (!video_writer_)
-                    initVideoWriter();
+                    InitVideoWriter();
 
                 video_writer_->Write(frame);
                 const auto video_uid = video_writer_->GetUid();
-                if (video_uid != last_alarm_video_uid_ || isAlarmImageDelayPassed()) {
+                if (video_uid != last_alarm_video_uid_ || IsAlarmImageDelayPassed()) {
                     auto& alarm_frame = (settings_.use_image_scale ? scaled_frame : frame);
-                    drawBoxes(alarm_frame, detect_result["predictions"]);
-                    postAlarmPhoto(alarm_frame);
+                    DrawBoxes(alarm_frame, detect_result["predictions"]);
+                    PostAlarmPhoto(alarm_frame);
                     last_alarm_video_uid_ = video_uid;
                 }
             } else {  // Not detected
@@ -138,11 +138,11 @@ void Core::processingThreadFunc() {
                         first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();    
                     } else {
                         LogTrace() << "Cooldown frame saved";
-                        if (isCooldownFinished()) {
+                        if (IsCooldownFinished()) {
                             const auto uid = video_writer_->GetUid();
                             LogInfo() << "Finish writing file with uid = " << uid;
-                            if (const auto preview_file_path = saveVideoPreview(uid); settings_.send_video_previews)
-                                postVideoPreview(preview_file_path);
+                            if (const auto preview_file_path = SaveVideoPreview(uid); settings_.send_video_previews)
+                                PostVideoPreview(preview_file_path);
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();
@@ -154,15 +154,15 @@ void Core::processingThreadFunc() {
     }
 }
 
-bool Core::isCooldownFinished() const {
+bool Core::IsCooldownFinished() const {
     return std::chrono::steady_clock::now() - *first_cooldown_frame_timestamp_ > std::chrono::milliseconds(settings_.cooldown_write_time_ms);
 }
 
-bool Core::isAlarmImageDelayPassed() const {
+bool Core::IsAlarmImageDelayPassed() const {
     return std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.alarm_notification_delay_ms);
 }
 
-void Core::captureThreadFunc() {
+void Core::CaptureThreadFunc() {
     while (!stop_) {
         cv::Mat frame;
         if (!frame_reader_.getFrame(frame)) {
@@ -194,12 +194,12 @@ void Core::captureThreadFunc() {
                 debug_buffer_out_time = now;
             }
 
-            if (buffer_size > max_buffer_size) {
+            if (buffer_size > kMaxBufferSize) {
                 if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::Delay) {
-                    LogWarning() << "Buffer size exceeds max (" << max_buffer_size << "), delay capture";
-                    std::this_thread::sleep_for(buffer_overflow_delay);
+                    LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), delay capture";
+                    std::this_thread::sleep_for(kBufferOverflowDelay);
                 } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::DropHalf) {
-                    LogWarning() << "Buffer size exceeds max (" << max_buffer_size << "), dropping half of cache";
+                    LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), dropping half of cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));
@@ -211,7 +211,7 @@ void Core::captureThreadFunc() {
     stop_.notify_all();
 }
 
-void Core::start() {
+void Core::Start() {
     if (!stop_) {
         LogInfo() << "Attempt start() on already running core";
         return;
@@ -219,11 +219,11 @@ void Core::start() {
 
     stop_ = false;
     stop_.notify_all();
-    capture_thread_ = std::jthread(&Core::captureThreadFunc, this);
-    processing_thread_ = std::jthread(&Core::processingThreadFunc, this);
+    capture_thread_ = std::jthread(&Core::CaptureThreadFunc, this);
+    processing_thread_ = std::jthread(&Core::ProcessingThreadFunc, this);
 }
 
-void Core::stop() {
+void Core::Stop() {
     if (stop_) {
         LogInfo() << "Attempt stop() on already stopped core";
     }

@@ -26,22 +26,22 @@ public:
     Core& operator=(const Core&) = delete;
     Core& operator=(Core&&) = delete;
 
-    void start();
-    void stop();
+    void Start();
+    void Stop();
 
 private:
-    void captureThreadFunc();
-    void processingThreadFunc();
+    void CaptureThreadFunc();
+    void ProcessingThreadFunc();
 
-    void postOnDemandPhoto(const cv::Mat& frame);
-    void postAlarmPhoto(const cv::Mat& frame);
-    std::filesystem::path saveVideoPreview(const std::string& video_file_uid);
-    void postVideoPreview(const std::filesystem::path& file_path);
+    void PostOnDemandPhoto(const cv::Mat& frame);
+    void PostAlarmPhoto(const cv::Mat& frame);
+    std::filesystem::path SaveVideoPreview(const std::string& video_file_uid);
+    void PostVideoPreview(const std::filesystem::path& file_path);
 
-    static void drawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
-    void initVideoWriter();
-    bool isCooldownFinished() const;
-    bool isAlarmImageDelayPassed() const;
+    static void DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
+    void InitVideoWriter();
+    bool IsCooldownFinished() const;
+    bool IsAlarmImageDelayPassed() const;
 
     const Settings settings_;
     FrameReader frame_reader_;

@@ -28,14 +28,14 @@ int main() {
     });
 
     Core core(settings);
-    core.start();
+    core.Start();
 
     std::string command;
     while (true) {
         std::cin >> command;
         if (command == "q") {
             std::cout << "Exiting..." << std::endl;
-            core.stop();
+            core.Stop();
             break;
         } else {
             std::cout << "Invalid command. Enter \"q\" to quit" << std::endl;
