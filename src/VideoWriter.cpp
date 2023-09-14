@@ -62,33 +62,19 @@ cv::Mat VideoWriter::GetPreviewImage() const {
         return CreateEmptyPreview();
     }
 
-    std::vector<int> indexes(kPreviewImages, -1);
-    const auto preview_frames_size = preview_frames_.size();
-    const size_t images_count = std::min(preview_frames_size, kPreviewImages);
-    const double step = static_cast<double>(preview_frames_size) / images_count;
-    for (size_t i = 0; i < images_count; ++i) {
-        if (images_count == preview_frames_size) {
-            indexes[i] = i;
-        } else {
-            indexes[i] = static_cast<size_t>(step * i);
-        }
-    }
-
-    LogInfo() << "Preview frames count = " << preview_frames_size << ", indexes = " << indexes;
+    const double step = static_cast<double>(preview_frames_.size()) / kPreviewImages;
+    LogInfo() << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
     const auto images_in_row = static_cast<int>(std::sqrt(kPreviewImages));
-    const cv::Mat empty_frame = cv::Mat::zeros(preview_frames_[0].size(), CV_8UC1);
-    for (size_t i = 0, sz = indexes.size(); i < sz; ++i) {
-        const auto idx = indexes[i];
-        const auto frame = idx == -1 ? empty_frame : preview_frames_[idx];
-
+    for (size_t i = 0 ; i < kPreviewImages; ++i) {
+        const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
             LogDebug() << "Add row, i = " << i;
-            rows.push_back(frame);
+            rows.push_back(preview_frames_[idx]);
         } else {
             auto& row = rows.back();
-            cv::hconcat(row, frame, row);
+            cv::hconcat(row, preview_frames_[idx], row);
         }
     }
 
