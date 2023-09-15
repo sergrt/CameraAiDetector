@@ -75,11 +75,11 @@ private:
     void PollThreadFunc();
     void QueueThreadFunc();
 
-    void ProcessOnDemandCmdImpl(uint64_t user_id);
-    void ProcessPingCmdImpl(uint64_t user_id);
-    void ProcessVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
-    void ProcessPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter);
-    void ProcessVideoCmdImpl(uint64_t user_id, const std::string& video_uid);
+    void ProcessOnDemandCmd(uint64_t user_id);
+    void ProcessPingCmd(uint64_t user_id);
+    void ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter);
+    void ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter);
+    void ProcessVideoCmd(uint64_t user_id, const std::string& video_uid);
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;

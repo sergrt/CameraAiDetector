@@ -152,24 +152,24 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     });
     bot_->getEvents().onCommand(kImageCmd, [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
-            ProcessOnDemandCmdImpl(id);
+            ProcessOnDemandCmd(id);
         }
     });
     bot_->getEvents().onCommand(kPingCmd, [&](TgBot::Message::Ptr message) { 
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
-            ProcessPingCmdImpl(id);
+            ProcessPingCmd(id);
         }
     });
     bot_->getEvents().onCommand(kVideosCmd, [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
-            ProcessVideosCmdImpl(id, filter);
+            ProcessVideosCmd(id, filter);
         }
     });
     bot_->getEvents().onCommand(kPreviewsCmd, [&](TgBot::Message::Ptr message) {
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
-            ProcessPreviewsCmdImpl(id, filter);
+            ProcessPreviewsCmd(id, filter);
         }
     });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
@@ -177,7 +177,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             if (StringTools::startsWith(message->text, VideoCmdPrefix())) {
                 LogInfo() << "video command received: " << message->text;
                 const std::string uid = message->text.substr(VideoCmdPrefix().size());  // uid of file
-                ProcessVideoCmdImpl(id, uid);
+                ProcessVideoCmd(id, uid);
             }
         } else {
             LogWarning() << "Unauthorized user tried to access: " << id;
@@ -188,21 +188,21 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             const auto command = query->data.substr(1);  // Remove slash
             if (StringTools::startsWith(query->data, VideoCmdPrefix())) {
                 const std::string video_id = query->data.substr(VideoCmdPrefix().size());
-                ProcessVideoCmdImpl(id, video_id);
+                ProcessVideoCmd(id, video_id);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, kPreviewsCmd)) {  // Space is a separator between cmd and filter
                 const auto filter = GetFilter(command.substr(kPreviewsCmd.size()));
-                ProcessPreviewsCmdImpl(id, filter);
+                ProcessPreviewsCmd(id, filter);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, kVideosCmd)) {  // Space is a separator between cmd and filter
                 const auto filter = GetFilter(command.substr(kVideosCmd.size()));
-                ProcessVideosCmdImpl(id, filter);
+                ProcessVideosCmd(id, filter);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, kImageCmd)) {
-                ProcessOnDemandCmdImpl(id);
+                ProcessOnDemandCmd(id);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, kPingCmd)) {
-                ProcessPingCmdImpl(id);
+                ProcessPingCmd(id);
                 PostAnswerCallback(query->id);
             }
         }
@@ -213,16 +213,16 @@ TelegramBot::~TelegramBot() {
     Stop();
 }
 
-void TelegramBot::ProcessOnDemandCmdImpl(uint64_t user_id) {
+void TelegramBot::ProcessOnDemandCmd(uint64_t user_id) {
     std::lock_guard lock(photo_mutex_);
     users_waiting_for_photo_.insert(user_id);
 }
 
-void TelegramBot::ProcessPingCmdImpl(uint64_t user_id) {
+void TelegramBot::ProcessPingCmd(uint64_t user_id) {
     PostMessage(user_id, PrepareStatusInfo(storage_path_));
 }
 
-void TelegramBot::ProcessVideosCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
+void TelegramBot::ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter) {
     const auto files = CollectVideoFileUids(storage_path_, filter);
     if (files.empty()) {
         PostMessage(user_id, "No files found");
@@ -242,7 +242,7 @@ void TelegramBot::ProcessVideosCmdImpl(uint64_t user_id, const std::optional<Fil
     PostMessage(user_id, commands_message);
 }
 
-void TelegramBot::ProcessPreviewsCmdImpl(uint64_t user_id, const std::optional<Filter>& filter) {
+void TelegramBot::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter) {
     const auto files = CollectVideoFileUids(storage_path_, filter);
     if (files.empty()) {
         PostMessage(user_id, "No files found");
@@ -256,7 +256,7 @@ void TelegramBot::ProcessPreviewsCmdImpl(uint64_t user_id, const std::optional<F
     PostMessage(user_id, "Previews sending completed");
 }
 
-void TelegramBot::ProcessVideoCmdImpl(uint64_t user_id, const std::string& video_uid) {
+void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid) {
     if (!IsUidValid(video_uid)) {
         LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
         PostMessage(user_id, "Invalid file requested");
