@@ -1,5 +1,5 @@
 # CameraAiDetector
-Camera and video AI detection/notification system
+AI-powered detection/notification system for cameras and video files
 
 This application is based on CodeProject AI (https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way), and performs the following:
 - Capture video stream (from camera - e.g. **rtsp**, or any **video file** or source, supported by OpenCV)
@@ -12,11 +12,13 @@ The application is written using C++, so it can be compiled on any supported pla
 
 ### Features
 - Send telegram notifications to authorized users about objects on camera (alarm images)
+  
   <img src="../media/person.jpg" alt="drawing" width="300"/> <img src="../media/cars.jpg" alt="drawing" width="300"/>
 - Record videos based on detected object - useful to save space on device (only videos of interest are recorded)
-- Send image with video preview after the video has been recorded
+- Send image with video preview after the video has been recorded - several frames to see if something interesting was recorded
+  
   <img src="../media/video_preview.jpg" alt="drawing" width="300"/>
-- Allow users to get instant shot from camera
+- Allow users to get instant shots from camera
 - List all recorded videos - with or without previews, optionally filtered by time depth
 - Allow users to download particular video
 
@@ -28,9 +30,9 @@ The application is written using C++, so it can be compiled on any supported pla
 - `/video_<id>` - get video with `<id>`
 - `/ping` - check app is up and running - report current time and free disk space
 
-list of videos (and previews) can be filtered. For example, use `/videos 30m` to get list of videos recorded last 30 minutes. Supported suffixes are `m` (minutes), `h` (hours) and `d` (days).
+List of videos (and previews) can be filtered by time depth. For example, use `/videos 30m` to get list of videos recorded for last 30 minutes. Supported suffixes are: `m` (minutes), `h` (hours) and `d` (days).
 
-### Requirements:
+### Compilation requirements:
 - C++20 compatible compiler (see notes on how to use it with older compilers), so gcc 13 or modern Visual Studio is required
 - CMake
 - 3rd party libs:
@@ -41,6 +43,10 @@ list of videos (and previews) can be filtered. For example, use `/videos 30m` to
     - OpenSSL
     - Boost
     - ZLib
+
+## CodeProject AI server installation
+Download CodeProject AI here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
+For detection to work there should be YOLOv5 module installed. Use CodeProject AI dashboard to install module for your platform.
 
 ## Configuration
 Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
@@ -54,10 +60,6 @@ To tweak performance, try to use different frame scaling, and different image fo
 Compilation for Linux is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's `CMakeLists.txt`, see Windows installation section.
 ### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
-
-#### Install CodeProject AI server
-Download here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
-
 #### Clone application repository and create 3rdparty dir:
 ```
 $ git clone https://github.com/sergrt/CameraAiDetector.git
