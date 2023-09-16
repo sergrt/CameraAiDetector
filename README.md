@@ -10,7 +10,7 @@ This application is based on CodeProject AI (https://www.codeproject.com/Article
 
 The application is written using C++, so it can be compiled on any supported platform.
 
-### Features
+## Features
 - Send telegram notifications to authorized users about objects on camera (alarm images)
   
   <img src="../media/person.jpg" alt="drawing" width="300"/> <img src="../media/cars.jpg" alt="drawing" width="300"/>
@@ -22,7 +22,7 @@ The application is written using C++, so it can be compiled on any supported pla
 - List all recorded videos - with or without previews, optionally filtered by time depth
 - Allow users to download particular video
 
-### Telegram bot commands
+## Telegram bot commands
 - `/start` - start using bot - main menu
 - `/image` - get instant shot from camera
 - `/videos` - get list of recorded videos
@@ -32,7 +32,27 @@ The application is written using C++, so it can be compiled on any supported pla
 
 List of videos (and previews) can be filtered by time depth. For example, use `/videos 30m` to get list of videos recorded for last 30 minutes. Supported suffixes are: `m` (minutes), `h` (hours) and `d` (days).
 
-### Compilation requirements:
+## Installation
+1. Download latest package from the "Releases" section
+2. Download and install CodeProject AI from here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
+3. Enable YOLOv5 from CodeProject AI dashboard - select one suitable for your platform
+4. Create new Telegram bot and obtain bot token
+5. Update `settings.json` file. At least these parameters should be set:
+   - `source` - video stream URL or video file path
+   - `storage_path` - exisiting folder to store videos and images
+   - `bot_token` - Telegram bot token
+   - `allowed_users` - add yourself here
+6. Run app and  send `/start` to your bot
+
+## Configuration
+Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
+- `cooldown_write_time_ms` - time (in milliseconds) to write after object disappears
+- `nth_detect_frame` - send every nth frame to AI. This helps to spare some system resources
+
+NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
+
+## Compilation
+### Requirements:
 - C++20 compatible compiler (see notes on how to use it with older compilers), so gcc 13 or modern Visual Studio is required
 - CMake
 - 3rd party libs:
@@ -44,22 +64,12 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
     - Boost
     - ZLib
 
-## CodeProject AI server installation
-Download CodeProject AI here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
-For detection to work there should be YOLOv5 module installed. Use CodeProject AI dashboard to install module for your platform.
-
-## Configuration
-Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
-- `cooldown_write_time_ms` - time (in milliseconds) to write after object disappears
-- `nth_detect_frame` - send every nth frame to AI. This helps to spare some system resources
-
-To tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
-
-## Compilation
 ### Linux
 Compilation for Linux is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's `CMakeLists.txt`, see Windows installation section.
+
 ### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
+
 #### Clone application repository and create 3rdparty dir:
 ```
 $ git clone https://github.com/sergrt/CameraAiDetector.git
@@ -139,9 +149,11 @@ $ cd build
 $ cmake ..
 # Build generated project with your compiler, e. g. Visual Studio
 ```
-## Notes
+#### Notes
 For older compilers you need to alter code. Some things to consider:
 - replace `jthread` with `thread` (and uncomment some code to `join()` them on application stop)
-- string formatting
+- string formatting should be rewritten
 - use older stream instead of syncronized stream
-- remove zoned_time and use utc
+- remove `zoned_time` and use utc
+- something should be done with `std::filesystem`
+
