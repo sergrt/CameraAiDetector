@@ -2,6 +2,7 @@
 
 #include "Helpers.h"
 #include "Log.h"
+#include "Translation.h"
 #include "UidUtils.h"
 #include "VideoWriter.h"
 
@@ -53,46 +54,47 @@ bool ApplyFilter(const Filter& filter, const std::string& file_name) {
 }
 
 TgBot::InlineKeyboardMarkup::Ptr MakeStartMenu() {
+    using namespace translation::menu;
     auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
     {
         std::vector<TgBot::InlineKeyboardButton::Ptr> row;
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Views 1h";
+        row.back()->text = kViews + " 1" + kHour;
         row.back()->callbackData = "/" + kPreviewsCmd + " 1h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Views 12h";
+        row.back()->text = kViews + " 12" + kHour;
         row.back()->callbackData = "/" + kPreviewsCmd + " 12h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Views 24h";
+        row.back()->text = kViews + " 24" + kHour;
         row.back()->callbackData = "/" + kPreviewsCmd + " 24h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Views all";
+        row.back()->text = kViews + " " + kAll;
         row.back()->callbackData = "/" + kPreviewsCmd;
         keyboard->inlineKeyboard.push_back(std::move(row));
     }
     {
         std::vector<TgBot::InlineKeyboardButton::Ptr> row;
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Videos 1h";
+        row.back()->text = kVideos + " 1" + kHour;
         row.back()->callbackData = "/" + kVideosCmd + " 1h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Videos 12h";
+        row.back()->text = kVideos + " 12" + kHour;
         row.back()->callbackData = "/" + kVideosCmd + " 12h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Videos 24h";
+        row.back()->text = kVideos + " 24" + kHour;
         row.back()->callbackData = "/" + kVideosCmd + " 24h";
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Videos all";
+        row.back()->text = kVideos + " " + kAll;
         row.back()->callbackData = "/" + kVideosCmd;
         keyboard->inlineKeyboard.push_back(std::move(row));
     }
     {
         std::vector<TgBot::InlineKeyboardButton::Ptr> row;
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Instant image";
+        row.back()->text = kImage;
         row.back()->callbackData = "/" + kImageCmd;
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = "Ping";
+        row.back()->text = kPing;
         row.back()->callbackData = "/" + kPingCmd;
         keyboard->inlineKeyboard.push_back(std::move(row));
     }
@@ -117,7 +119,7 @@ std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
         free_space.insert(i, "'");
     }
     // Some useful utf chars: &#9989; &#127909; &#128247; &#128680; &#128226; &#128266; &#10071; &#128681; &#8505; &#127916; &#127910; &#128064;
-    return "&#8505; " + timestamp + ", " + free_space + " MB free";
+    return "&#8505; " + timestamp + ", " + free_space + " MB " + translation::messages::kAvailable;
 }
 
 struct VideoFileInfo {
@@ -225,7 +227,7 @@ void TelegramBot::ProcessPingCmd(uint64_t user_id) {
 void TelegramBot::ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter) {
     const auto files = CollectVideoFileUids(storage_path_, filter);
     if (files.empty()) {
-        PostMessage(user_id, "No files found");
+        PostMessage(user_id, translation::messages::kNoFilesFound);
         return;
     }
 
@@ -245,7 +247,7 @@ void TelegramBot::ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>
 void TelegramBot::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter) {
     const auto files = CollectVideoFileUids(storage_path_, filter);
     if (files.empty()) {
-        PostMessage(user_id, "No files found");
+        PostMessage(user_id, translation::messages::kNoFilesFound);
         return;
     }
 
@@ -253,13 +255,13 @@ void TelegramBot::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filte
         const std::filesystem::path file_path = storage_path_ / VideoWriter::GeneratePreviewFileName(file.uid);
         PostVideoPreview(user_id, file_path);
     }
-    PostMessage(user_id, "Previews sending completed");
+    PostMessage(user_id, translation::messages::kPreviewsSendEnded);
 }
 
 void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid) {
     if (!IsUidValid(video_uid)) {
         LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
-        PostMessage(user_id, "Invalid file requested");
+        PostMessage(user_id, translation::messages::kInvalidFileRequested);
         return;
     }
 
@@ -269,7 +271,7 @@ void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid
     if (std::filesystem::exists(file_path)) {
         PostVideo(user_id, file_path);
     } else {
-        PostMessage(user_id, "Invalid file specified - path not found");
+        PostMessage(user_id, translation::messages::kFileNotFound);
     }
 }
 
@@ -376,7 +378,7 @@ void TelegramBot::SendVideo(uint64_t recipient, const std::filesystem::path& fil
 
 void TelegramBot::SendMenu(uint64_t recipient) {
     try {
-        if (!bot_->getApi().sendMessage(recipient, "&#9995; Start here", false, 0, MakeStartMenu(), "HTML"))
+        if (!bot_->getApi().sendMessage(recipient, translation::menu::kCaption, false, 0, MakeStartMenu(), "HTML"))
             LogError() << "/start reply send failed to user " << recipient;
     } catch (std::exception& e) {
         LogException("Exception while sending menu", __FILE__, __LINE__, e.what());

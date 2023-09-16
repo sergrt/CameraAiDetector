@@ -65,6 +65,7 @@ set(HEADER
   Settings.h
   StreamProperties.h
   TelegramBot.h
+  Translation.h
   UidUtils.h
   VideoWriter.h)
 
