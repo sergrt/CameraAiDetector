@@ -32,8 +32,12 @@ void Core::PostOnDemandPhoto(const cv::Mat& frame) {
 
 void Core::InitVideoWriter() {
     LogInfo() << "Init video writer";
-    const auto stream_properties = frame_reader_.GetStreamProperties();
-    video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, stream_properties);
+    const auto in_properties = frame_reader_.GetStreamProperties();
+    const auto out_properties = StreamProperties{
+        in_properties.fps,
+        settings_.use_video_scale ? settings_.video_height : in_properties.height,
+        settings_.use_video_scale ? settings_.video_width : in_properties.width};
+    video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, in_properties, out_properties);
 }
 
 void Core::PostAlarmPhoto(const cv::Mat& frame) {

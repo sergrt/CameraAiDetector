@@ -47,7 +47,10 @@ Settings LoadSettings() {
     settings.img_scale_x = json.value("img_scale_x", settings.img_scale_x);
     settings.img_scale_y = json.value("img_scale_y", settings.img_scale_y);
     settings.img_format = json.value("img_format", settings.img_format);
-    
+    settings.use_video_scale = json.value("use_video_scale", settings.use_video_scale);
+    settings.video_width = json.value("video_width", settings.video_width);
+    settings.video_height = json.value("video_height", settings.video_height );
+
     settings.bot_token = json["bot_token"];
     settings.allowed_users = json["allowed_users"].get<std::set<uint64_t>>();
     settings.alarm_notification_delay_ms = json.value("alarm_notification_delay_ms", settings.alarm_notification_delay_ms);

@@ -28,7 +28,10 @@ struct Settings {
     double img_scale_x = 0.5;  // Scale factor before sending to AI
     double img_scale_y = 0.5;  // Scale factor before sending to AI
     std::string img_format = "jpg";  // any cv and mime compatible type
-    
+    bool use_video_scale = true;  // Scale saved videos
+    int video_width = 1024;  // Scaled video width
+    int video_height = 576;  // Scaled video height
+
     // Telegram bot preferences
     std::string bot_token;  // Keep this in secret
     std::set<uint64_t> allowed_users;  // allowed users
