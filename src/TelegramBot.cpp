@@ -11,6 +11,7 @@
 #include <regex>
 
 constexpr size_t kMaxMessageLen = 4096;
+const auto kStartCmd = std::string("start");
 const auto kPreviewsCmd = std::string("previews");
 const auto kVideosCmd = std::string("videos");
 const auto kVideoCmd = std::string("video");
@@ -147,34 +148,40 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
     , storage_path_(std::move(storage_path))
     , allowed_users_(std::move(allowed_users)) {
 
-    bot_->getEvents().onCommand("start", [this](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(kStartCmd, [this](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kStartCmd << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             PostMenu(id);
         }
     });
     bot_->getEvents().onCommand(kImageCmd, [&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kImageCmd << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessOnDemandCmd(id);
         }
     });
-    bot_->getEvents().onCommand(kPingCmd, [&](TgBot::Message::Ptr message) { 
+    bot_->getEvents().onCommand(kPingCmd, [&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kPingCmd << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessPingCmd(id);
         }
     });
     bot_->getEvents().onCommand(kVideosCmd, [&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kVideosCmd << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessVideosCmd(id, filter);
         }
     });
     bot_->getEvents().onCommand(kPreviewsCmd, [&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kPreviewsCmd << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessPreviewsCmd(id, filter);
         }
     });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received message " << message->text << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             if (StringTools::startsWith(message->text, VideoCmdPrefix())) {
                 LogInfo() << "video command received: " << message->text;
@@ -186,6 +193,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         }
     });
     bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
+        LogInfo() << "Received callback query " << query->message->text << " from user " << query->message->chat->id;
         if (const auto id = query->message->chat->id; IsUserAllowed(id)) {
             const auto command = query->data.substr(1);  // Remove slash
             if (StringTools::startsWith(query->data, VideoCmdPrefix())) {
