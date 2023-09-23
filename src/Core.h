@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CodeprojectAiFacade.h"
+#include "ErrorReportState.h"
 #include "FrameReader.h"
 #include "Settings.h"
 #include "TelegramBot.h"
@@ -62,4 +63,8 @@ private:
     std::condition_variable buffer_cv_;
 
     size_t get_frame_error_count_ = 0;
+
+    // Use error states in appropriate threads only, no sync is performed for the sake of performance
+    ErrorState ai_error_;
+    ErrorState frame_reader_error_;
 };

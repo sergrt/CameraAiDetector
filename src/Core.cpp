@@ -1,6 +1,7 @@
 #include "Core.h"
 
 #include "Log.h"
+#include "Translation.h"
 #include "UidUtils.h"
 
 const cv::Scalar kFrameColor = cv::Scalar(0.0, 0.0, 200.0);
@@ -115,8 +116,22 @@ void Core::ProcessingThreadFunc() {
             }
             const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
             LogTrace() << "Detect result: " << detect_result;
+            
+            if (detect_result.empty()) {
+                if (!ai_error_.IsActive()) {
+                    bot_.PostMessage(translation::errors::kAiCommunicationLost);
+                    ai_error_.Activate();
+                }
+            } else {
+                if (ai_error_.IsActive()) {
+                    bot_.PostMessage(translation::errors::kAiCommunicationRestored);
+                    ai_error_.Reset();
+                }
+            }
 
-            if (!detect_result.empty() && detect_result["success"] == true && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
+            if (!detect_result.empty() 
+                && detect_result.contains("success") && detect_result["success"] == true
+                && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
                     LogInfo() << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
@@ -172,6 +187,10 @@ void Core::CaptureThreadFunc() {
         if (!frame_reader_.GetFrame(frame)) {
             ++get_frame_error_count_;
             LogError() << "Can't get frame";
+            if (!frame_reader_error_.IsActive()) {
+                bot_.PostMessage(translation::errors::kGetFrameError);
+                frame_reader_error_.Activate();
+            }
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
                 LogInfo() << "Reconnect";
@@ -182,6 +201,10 @@ void Core::CaptureThreadFunc() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
             }
         } else {
+            if (frame_reader_error_.IsActive()) {
+                bot_.PostMessage(translation::errors::kGetFrameRestored);
+                frame_reader_error_.Reset();
+            }
             get_frame_error_count_ = 0;
             size_t buffer_size = 0;
             {

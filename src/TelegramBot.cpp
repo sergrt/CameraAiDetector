@@ -427,6 +427,14 @@ void TelegramBot::PostMessage(uint64_t user_id, const std::string& message) {
     queue_cv_.notify_one();
 }
 
+void TelegramBot::PostMessage(const std::string& message) {
+    {
+        std::lock_guard lock(queue_mutex_);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::kMessage, message, "", allowed_users_);
+    }
+    queue_cv_.notify_one();
+}
+
 void TelegramBot::PostVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path) {
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);

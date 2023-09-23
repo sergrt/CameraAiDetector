@@ -51,6 +51,7 @@ public:
     void PostOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
     void PostAlarmPhoto(const std::filesystem::path& file_path);  // No user id - goes to all users
     void PostMessage(uint64_t user_id, const std::string& message);
+    void PostMessage(const std::string& message);
     void PostVideoPreview(std::optional<uint64_t> user_id, const std::filesystem::path& file_path);
     void PostVideo(uint64_t user_id, const std::filesystem::path& file_path);
     void PostMenu(uint64_t user_id);
