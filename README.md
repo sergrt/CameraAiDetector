@@ -56,6 +56,7 @@ NB: to tweak performance, try to use different frame scaling, and different imag
 - C++20 compatible compiler (see notes on how to use it with older compilers), so gcc 13 or modern Visual Studio is required
 - CMake
 - 3rd party libs:
+  - Boost
   - nlohmann-json
   - CURL
   - OpenCV
