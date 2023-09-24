@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/lexical_cast.hpp>
+
 #include <syncstream>
 #include <vector>
 
@@ -15,6 +17,26 @@ LogLevel StringToLogLevel(const std::string& str);
 
 extern LogLevel kAppLogLevel;
 extern std::ostream* kAppLogStream;
+
+struct StreamWrapper {
+public:
+    StreamWrapper(std::ostream& stream) : stream_(&stream) {}
+
+    template <typename T>
+    StreamWrapper& operator<<(const T& data) {
+        *stream_ << data;
+        string_ += boost::lexical_cast<std::string>(data);
+        return *this;
+    }
+
+    std::string str() const {
+        return string_;
+    }
+
+private:
+    std::ostream* stream_;
+    std::string string_;
+};
 
 class Log final {
 public:
@@ -58,7 +80,7 @@ private:
     void WriteTimestamp();
     void WriteLevel();
 
-    std::osyncstream stream_;
+    StreamWrapper stream_;
     const LogLevel log_level_;
     bool something_written_ = false;
 };

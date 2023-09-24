@@ -81,6 +81,7 @@ private:
     void ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter);
     void ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter);
     void ProcessVideoCmd(uint64_t user_id, const std::string& video_uid);
+    void ProcessLogCmd(uint64_t user_id);
 
     std::unique_ptr<TgBot::Bot> bot_;
     std::filesystem::path storage_path_;

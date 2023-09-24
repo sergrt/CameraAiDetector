@@ -2,6 +2,8 @@
 
 #include "Helpers.h"
 #include "Log.h"
+#include "RingBuffer.h"
+#include "SafePtr.h"
 #include "Translation.h"
 #include "UidUtils.h"
 #include "VideoWriter.h"
@@ -17,6 +19,9 @@ const auto kVideosCmd = std::string("videos");
 const auto kVideoCmd = std::string("video");
 const auto kImageCmd = std::string("image");
 const auto kPingCmd = std::string("ping");
+const auto kLogCmd = std::string("log");
+
+extern SafePtr<RingBuffer<std::string>> AppLogTail;
 
 namespace {
 
@@ -180,6 +185,12 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
             ProcessPreviewsCmd(id, filter);
         }
     });
+    bot_->getEvents().onCommand(kLogCmd, [&](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << kLogCmd << " from user " << message->chat->id;
+        if (const auto id = message->chat->id; IsUserAllowed(id)) {
+            ProcessLogCmd(id);
+        }
+    });
     bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
         LogInfo() << "Received message " << message->text << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
@@ -281,6 +292,24 @@ void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid
     } else {
         PostMessage(user_id, translation::messages::kFileNotFound);
     }
+}
+
+void TelegramBot::ProcessLogCmd(uint64_t user_id) {
+    const auto log_lines = AppLogTail->dump();
+    if (log_lines.empty())
+        return;
+
+    std::string message;
+    for (const auto& line : log_lines) {
+        if (message.size() + line.size() > kMaxMessageLen) {
+            PostMessage(user_id, message);
+            message = line;
+        } else {
+            message += line;
+        }
+    }
+
+    PostMessage(user_id, message);
 }
 
 bool TelegramBot::IsUserAllowed(uint64_t user_id) const {

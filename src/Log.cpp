@@ -1,11 +1,15 @@
 #include "Log.h"
 
 #include "Helpers.h"
+#include "RingBuffer.h"
+#include "SafePtr.h"
 
 #include <chrono>
 #include <map>
 #include <stdexcept>
 #include <string>
+
+extern SafePtr<RingBuffer<std::string>> AppLogTail;
 
 const std::map<LogLevel, std::string> kLevelToStr = {
     {kTrace,   "[TRACE]"},
@@ -43,7 +47,7 @@ LogLevel StringToLogLevel(const std::string& str) {
 }
 
 Log::Log(LogLevel level)
-    : stream_(std::osyncstream(*kAppLogStream))
+    : stream_(*kAppLogStream)
     , log_level_(level) {
     
     if (CheckLevel()) {
@@ -58,6 +62,7 @@ Log::~Log() {
     if (something_written_) {
         // stream_ << std::endl;  // Useful for debug
         stream_ << "\n";
+        AppLogTail->push(stream_.str());
     }
 }
 

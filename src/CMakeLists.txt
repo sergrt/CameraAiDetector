@@ -63,6 +63,8 @@ set(HEADER
   FrameReader.h
   Helpers.h
   Log.h
+  RingBuffer.h
+  SafePtr.h
   Settings.h
   StreamProperties.h
   TelegramBot.h
