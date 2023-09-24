@@ -29,6 +29,7 @@ The application is written using C++, so it can be compiled on any supported pla
 - `/previews` - get list of recorded videos with previews
 - `/video_<id>` - get video with `<id>`
 - `/ping` - check app is up and running - report current time and free disk space
+- `/log` - get log tail, useful to check what's going on
 
 List of videos (and previews) can be filtered by time depth. For example, use `/videos 30m` to get list of videos recorded for last 30 minutes. Supported suffixes are: `m` (minutes), `h` (hours) and `d` (days).
 
