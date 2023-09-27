@@ -116,22 +116,22 @@ void Core::ProcessingThreadFunc() {
             }
             const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
             LogTrace() << "Detect result: " << detect_result;
-            
-            if (detect_result.empty()) {
+
+            const auto detect_result_valid = !detect_result.empty() && detect_result.value("success", false);
+
+            if (!detect_result_valid) {
                 if (!ai_error_.IsActive()) {
-                    bot_.PostMessage(translation::errors::kAiCommunicationLost);
-                    ai_error_.Activate();
+                    bot_.PostMessage(detect_result.empty() ? translation::errors::kAiCommunicationLost
+                                                           : translation::errors::kAiProcessingError);
+                    ai_error_.Activate(detect_result.empty() ? translation::errors::kAiCommunicationRestored
+                                                             : translation::errors::kAiProcessingRestored);
                 }
             } else {
-                if (ai_error_.IsActive()) {
-                    bot_.PostMessage(translation::errors::kAiCommunicationRestored);
-                    ai_error_.Reset();
-                }
+                if (ai_error_.IsActive())
+                    bot_.PostMessage(ai_error_.Reset());
             }
 
-            if (!detect_result.empty() 
-                && detect_result.contains("success") && detect_result["success"] == true
-                && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
+            if (detect_result_valid && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
                     LogInfo() << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
@@ -189,7 +189,7 @@ void Core::CaptureThreadFunc() {
             LogError() << "Can't get frame";
             if (!frame_reader_error_.IsActive()) {
                 bot_.PostMessage(translation::errors::kGetFrameError);
-                frame_reader_error_.Activate();
+                frame_reader_error_.Activate(translation::errors::kGetFrameRestored);
             }
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
@@ -202,8 +202,7 @@ void Core::CaptureThreadFunc() {
             }
         } else {
             if (frame_reader_error_.IsActive()) {
-                bot_.PostMessage(translation::errors::kGetFrameRestored);
-                frame_reader_error_.Reset();
+                bot_.PostMessage(frame_reader_error_.Reset());
             }
             get_frame_error_count_ = 0;
             size_t buffer_size = 0;

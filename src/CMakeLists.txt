@@ -58,7 +58,7 @@ set(SOURCE
 set(HEADER
   CodeprojectAiFacade.h
   Core.h
-  ErrorReportState.h
+  ErrorState.h
   FinalAction.h
   FrameReader.h
   Helpers.h

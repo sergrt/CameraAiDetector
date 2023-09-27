@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CodeprojectAiFacade.h"
-#include "ErrorReportState.h"
+#include "ErrorState.h"
 #include "FrameReader.h"
 #include "Settings.h"
 #include "TelegramBot.h"
