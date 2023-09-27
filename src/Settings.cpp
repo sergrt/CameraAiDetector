@@ -38,7 +38,7 @@ Settings LoadSettings() {
     settings.errors_before_reconnect = json.value("errors_before_reconnect", settings.errors_before_reconnect);
     settings.delay_after_error_ms = json.value("delay_after_error_ms", settings.delay_after_error_ms);
     settings.cooldown_write_time_ms = json.value("cooldown_write_time_ms", settings.cooldown_write_time_ms);
-    settings.buffer_overflow_strategy = StringToBufferStrategy(json.value("buffer_overflow_strategy", "Delay"));  // TODO: add str to enum
+    settings.buffer_overflow_strategy = StringToBufferStrategy(json.value("buffer_overflow_strategy", "Delay"));
 
     settings.codeproject_ai_url = json["codeproject_ai_url"];
     settings.min_confidence = std::to_string(json.value("min_confidence", 0.4));
