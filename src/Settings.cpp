@@ -7,7 +7,6 @@
 #include <fstream>
 #include <stdexcept>
 
-constexpr auto kSettingsFileName = "settings.json";
 const std::map<std::string, BufferOverflowStrategy> kStrToBufferStrategy = {
     {"DELAY",    BufferOverflowStrategy::kDelay},
     {"DROPHALF", BufferOverflowStrategy::kDropHalf}
@@ -24,12 +23,12 @@ BufferOverflowStrategy StringToBufferStrategy(const std::string& str) {
 
 }  // namespace
 
-Settings LoadSettings() {
+Settings LoadSettings(const std::string& settings_file_name) {
     Settings settings;
 
     nlohmann::json json;
     {
-        std::ifstream stream(kSettingsFileName);
+        std::ifstream stream(settings_file_name);
         json = nlohmann::json::parse(stream);
     }
 

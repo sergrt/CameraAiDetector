@@ -43,4 +43,4 @@ struct Settings {
     std::string log_filename = "debug.log";  // empty string for cout
 };
 
-Settings LoadSettings();
+Settings LoadSettings(const std::string& settings_file_name);

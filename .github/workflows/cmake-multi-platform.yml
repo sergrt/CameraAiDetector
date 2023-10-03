@@ -75,7 +75,7 @@ jobs:
 
     - name: Install dependencies (linux)
       if: startsWith(matrix.os, 'ubuntu')
-      run: sudo apt-get -y update && sudo apt-get -y install libssl-dev libopencv-dev libboost-dev libcurl4-openssl-dev
+      run: sudo apt-get -y update && sudo apt-get -y install libssl-dev libopencv-dev libboost-dev libcurl4-openssl-dev libboost-program-options-dev
 
     # - uses: ilammy/msvc-dev-cmd@v1
     #   with:
