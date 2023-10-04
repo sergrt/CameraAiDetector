@@ -2,6 +2,8 @@
 
 #include "Log.h"
 
+#include <nlohmann/json.hpp>
+
 #include <stdexcept>
 
 namespace {
@@ -11,11 +13,25 @@ size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* userp) {
     return size * nmemb;
 }
 
+std::vector<Detection> ParseResponse(const nlohmann::json& response) {
+    std::vector<Detection> detections;
+    for (const auto& prediction : response["predictions"]) {
+        detections.emplace_back(
+            prediction["label"],
+            prediction["confidence"],
+            cv::Rect(cv::Point(prediction["x_min"], prediction["y_min"]),
+                     cv::Point(prediction["x_max"], prediction["y_max"]))
+        );
+    }
+    return detections;
+}
+
 }  // namespace
 
-CodeprojectAiFacade::CodeprojectAiFacade(std::string url, std::string min_confidence, const std::string& img_format)
+CodeprojectAiFacade::CodeprojectAiFacade(std::string url, float min_confidence, const std::string& img_format)
     : url_(std::move(url))
-    , min_confidence_(std::move(min_confidence))
+    , min_confidence_(std::to_string(min_confidence))
+    , img_format_("." + img_format)
     , img_mime_type_("image/" + img_format) {
 
     curl_global_init(CURL_GLOBAL_ALL);
@@ -34,7 +50,24 @@ CodeprojectAiFacade::~CodeprojectAiFacade() {
     curl_global_cleanup();
 }
 
-nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t data_size) {
+std::vector<unsigned char> CodeprojectAiFacade::PrepareImage(const cv::Mat& image) const {
+    std::vector<unsigned char> img_buffer;
+
+    // TODO: Check performance impact with different image quality
+    // const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 100};
+    static const std::vector<int> img_encode_param;
+
+    if (!cv::imencode(img_format_, image, img_buffer, img_encode_param)) {
+        LogError() << "Frame encoding failed";
+        return {};
+    }
+
+    return img_buffer;
+}
+
+bool CodeprojectAiFacade::Detect(const cv::Mat& image, std::vector<Detection>& detections) {  // const unsigned char* data, size_t data_size) {
+
+    const std::vector<unsigned char> data = PrepareImage(image);
     curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
 
     curl_httppost* form = nullptr;
@@ -43,8 +76,8 @@ nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t dat
     curl_formadd(&form, &last,
         CURLFORM_COPYNAME, "image",
         CURLFORM_BUFFER, "image",
-        CURLFORM_BUFFERPTR, data,
-        CURLFORM_BUFFERLENGTH, data_size,
+        CURLFORM_BUFFERPTR, data.data(),
+        CURLFORM_BUFFERLENGTH, data.size(),
         CURLFORM_CONTENTTYPE, img_mime_type_.c_str(),  // "image/jpeg", "image/bmp" etc.
         CURLFORM_END);
 
@@ -65,10 +98,11 @@ nlohmann::json CodeprojectAiFacade::Detect(const unsigned char* data, size_t dat
 
     if (res == CURLE_OK) {
         LogTrace() << "detect() ok, result: " << read_buffer;
-        return nlohmann::json::parse(read_buffer);
+        detections = ParseResponse(nlohmann::json::parse(read_buffer));
     } else {
         LogError() << "curl_easy_perform() failed: " << curl_easy_strerror(res);
+        return false;
     }
 
-    return {};
+    return true;
 }

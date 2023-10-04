@@ -10,7 +10,7 @@ private:
     class LockedPtr {
     public:
         LockedPtr(T* const data, M& mutex) : lock_(mutex), data_(data) {}
-        LockedPtr(LockedPtr&& other) : lock_(std::move(other.lock)), data_(other.data_) {}
+        LockedPtr(LockedPtr&& other) noexcept : lock_(std::move(other.lock_)), data_(other.data_) {}
         T* operator->() {
             return data_;
         }

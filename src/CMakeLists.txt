@@ -51,11 +51,13 @@ set(SOURCE
   FrameReader.cpp
   Log.cpp
   main.cpp
+  OpenCvAiFacade.cpp
   Settings.cpp
   TelegramBot.cpp
   VideoWriter.cpp)
 
 set(HEADER
+  Ai.h
   CodeprojectAiFacade.h
   Core.h
   ErrorState.h
@@ -63,6 +65,7 @@ set(HEADER
   FrameReader.h
   Helpers.h
   Log.h
+  OpenCvAiFacade.h
   RingBuffer.h
   SafePtr.h
   Settings.h

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CodeprojectAiFacade.h"
+#include "Ai.h"
 #include "ErrorState.h"
 #include "FrameReader.h"
 #include "Settings.h"
@@ -39,7 +39,7 @@ private:
     std::filesystem::path SaveVideoPreview(const std::string& video_file_uid);
     void PostVideoPreview(const std::filesystem::path& file_path);
 
-    static void DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions);
+    static void DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections);
     void InitVideoWriter();
     bool IsCooldownFinished() const;
     bool IsAlarmImageDelayPassed() const;
@@ -47,7 +47,7 @@ private:
     const Settings settings_;
     FrameReader frame_reader_;
     TelegramBot bot_;
-    CodeprojectAiFacade ai_facade_;
+    std::unique_ptr<Ai> ai_;
     std::unique_ptr<VideoWriter> video_writer_;
 
     std::jthread capture_thread_;

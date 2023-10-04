@@ -39,8 +39,10 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.cooldown_write_time_ms = json.value("cooldown_write_time_ms", settings.cooldown_write_time_ms);
     settings.buffer_overflow_strategy = StringToBufferStrategy(json.value("buffer_overflow_strategy", "Delay"));
 
+    settings.use_codeproject_ai = json.value("use_codeproject_ai", settings.use_codeproject_ai);
     settings.codeproject_ai_url = json["codeproject_ai_url"];
-    settings.min_confidence = std::to_string(json.value("min_confidence", 0.4));
+    settings.onnx_file_path = json["onnx_file_path"];
+    settings.min_confidence = json.value("min_confidence", 0.4);
     settings.nth_detect_frame = json.value("nth_detect_frame", settings.nth_detect_frame);
     settings.use_image_scale = json.value("use_image_scale", settings.use_image_scale);
     settings.img_scale_x = json.value("img_scale_x", settings.img_scale_x);

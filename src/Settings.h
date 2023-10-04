@@ -21,8 +21,10 @@ struct Settings {
 
     BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::kDelay;
 
+    bool use_codeproject_ai = true;
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
-    std::string min_confidence = "0.4";  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
+    std::string onnx_file_path = "yolov5s.onnx";
+    float min_confidence = 0.4;  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
     int nth_detect_frame = 10;  // Perform detect on every nth frame
     bool use_image_scale = true;  // Use image scale
     double img_scale_x = 0.5;  // Scale factor before sending to AI

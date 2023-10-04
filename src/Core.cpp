@@ -1,6 +1,8 @@
 #include "Core.h"
 
+#include "CodeprojectAiFacade.h"
 #include "Log.h"
+#include "OpenCvAiFacade.h"
 #include "Translation.h"
 #include "UidUtils.h"
 
@@ -10,10 +12,15 @@ constexpr size_t kMaxBufferSize = 500u;  // Approx 20 sec of 25 fps stream
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 
 Core::Core(Settings settings)
-    : settings_(std::move(settings)),
-      frame_reader_(settings_.source),
-      bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users),
-      ai_facade_(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format) {
+    : settings_(std::move(settings))
+    , frame_reader_(settings_.source)
+    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users) {
+
+    if (settings_.use_codeproject_ai) {
+        ai_ = std::make_unique<CodeprojectAiFacade>(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format);
+    } else {
+        ai_ = std::make_unique<OpenCvAiFacade>(settings_.onnx_file_path, settings_.min_confidence);
+    }
     bot_.Start();
     frame_reader_.Open();
 }
@@ -50,9 +57,9 @@ void Core::PostAlarmPhoto(const cv::Mat& frame) {
     bot_.PostAlarmPhoto(path);
 } 
 
-void Core::DrawBoxes(const cv::Mat& frame, const nlohmann::json& predictions) {
-    for (const auto& prediction : predictions) {
-        cv::rectangle(frame, cv::Point(prediction["x_min"], prediction["y_min"]), cv::Point(prediction["x_max"], prediction["y_max"]), kFrameColor, kFrameWidth);
+void Core::DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections) {
+    for (const auto& detection : detections) {
+        cv::rectangle(frame, detection.box, kFrameColor, kFrameWidth);
     }
 }
 
@@ -75,10 +82,6 @@ void Core::ProcessingThreadFunc() {
         static_cast<int>(frame_reader_.GetStreamProperties().height * settings_.img_scale_y));
     const auto img_format = "." + settings_.img_format;
 
-    // TODO: Check performance impact with different image quality
-    // const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 100};
-    const std::vector<int> img_encode_param;
-
     while (!stop_) {
         std::unique_lock lock(buffer_mutex_);
         buffer_cv_.wait(lock, [&] { return !buffer_.empty() || stop_; });
@@ -88,6 +91,7 @@ void Core::ProcessingThreadFunc() {
 
         const cv::Mat frame = std::move(buffer_.front());
         buffer_.pop_front();
+        //cv::Mat frame = buffer_.front();
         lock.unlock();
 
         if (bot_.SomeoneIsWaitingForPhoto())
@@ -104,34 +108,25 @@ void Core::ProcessingThreadFunc() {
         }
 
         if (check_frame) {
-            std::vector<unsigned char> img_buffer;
-
             cv::Mat scaled_frame;
             if (settings_.use_image_scale)
                 cv::resize(frame, scaled_frame, scaled_size);
 
-            if (!cv::imencode(img_format, settings_.use_image_scale ? scaled_frame : frame, img_buffer, img_encode_param)) {
-                LogError() << "Frame encoding failed";
-                continue;
-            }
-            const auto detect_result = ai_facade_.Detect(img_buffer.data(), img_buffer.size());
+            std::vector<Detection> detections;
+            const auto detect_result = ai_->Detect(settings_.use_image_scale ? scaled_frame : frame, detections);
             LogTrace() << "Detect result: " << detect_result;
 
-            const auto detect_result_valid = !detect_result.empty() && detect_result.value("success", false);
-
-            if (!detect_result_valid) {
+            if (!detect_result) {
                 if (!ai_error_.IsActive()) {
-                    bot_.PostMessage(detect_result.empty() ? translation::errors::kAiCommunicationLost
-                                                           : translation::errors::kAiProcessingError);
-                    ai_error_.Activate(detect_result.empty() ? translation::errors::kAiCommunicationRestored
-                                                             : translation::errors::kAiProcessingRestored);
+                    bot_.PostMessage(translation::errors::kAiProcessingError);
+                    ai_error_.Activate(translation::errors::kAiProcessingRestored);
                 }
             } else {
                 if (ai_error_.IsActive())
                     bot_.PostMessage(ai_error_.Reset());
             }
 
-            if (detect_result_valid && detect_result.contains("predictions") && !detect_result["predictions"].empty()) {
+            if (detect_result && !detections.empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
                     LogInfo() << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
@@ -144,7 +139,7 @@ void Core::ProcessingThreadFunc() {
                 const auto video_uid = video_writer_->GetUid();
                 if (video_uid != last_alarm_video_uid_ || IsAlarmImageDelayPassed()) {
                     auto& alarm_frame = settings_.use_image_scale ? scaled_frame : frame;
-                    DrawBoxes(alarm_frame, detect_result["predictions"]);
+                    DrawBoxes(alarm_frame, detections);
                     PostAlarmPhoto(alarm_frame);
                     last_alarm_video_uid_ = video_uid;
                 }
@@ -154,7 +149,7 @@ void Core::ProcessingThreadFunc() {
 
                     if (!first_cooldown_frame_timestamp_) {
                         LogInfo() << "Start cooldown writing";
-                        first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();    
+                        first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();
                     } else {
                         LogTrace() << "Cooldown frame saved";
                         if (IsCooldownFinished()) {
