@@ -1,7 +1,7 @@
 # CameraAiDetector
 AI-powered detection/notification system for cameras and video files
 
-This application is based on CodeProject AI (https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way), and performs the following:
+This application is based on YOLOv5 object detection engine, and performs the following:
 - Capture video stream (from camera - e.g. **rtsp**, or any **video file** or source, supported by OpenCV)
 - Detect objects using AI - persons, animals, vehicles, bicycles etc.
 - Send notifications via Telegram
@@ -21,6 +21,7 @@ The application is written using C++, so it can be compiled on any supported pla
 - Allow users to get instant shots from camera
 - List all recorded videos - with or without previews, optionally filtered by time depth
 - Allow users to download particular video
+- Allow to use OpenCV DNN (with or without CUDA support) or CodeProject AI (https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way)
 
 ## Telegram bot commands
 - `/start` - start using bot - main menu
@@ -35,15 +36,29 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
 
 ## Installation
 1. Download latest package from the "Releases" section
-2. Download and install CodeProject AI from here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
-3. Enable YOLOv5 from CodeProject AI dashboard - select one suitable for your platform
-4. Create new Telegram bot and obtain bot token
-5. Update `settings.json` file. At least these parameters should be set:
+2. Prepare AI backend. Choose one and setup:
+   1. Codeproject AI:
+      - Download and install CodeProject AI from here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
+      - Enable YOLOv5 from CodeProject AI dashboard - select one suitable for your platform
+   2. OpenCV AI DNN:
+      - Download YOLOv5 onnx file (see "Releases" section) - yolov5s recommended
+      - (For CUDA) Download OpenCV_CUDA_libs (see "Releases" section)
+      - Replace application libs with CUDA-enabled libs
+3. Create new Telegram bot and obtain bot token
+4. Update `settings.json` file. At least these parameters should be set:
    - `source` - video stream URL or video file path
    - `storage_path` - exisiting folder to store videos and images
    - `bot_token` - Telegram bot token
    - `allowed_users` - add yourself here
-6. Run app and  send `/start` to your bot
+   - in case OpenCV AI DNN is preffered, set `use_codeproject_ai` to false, and point `onnx_file_path` to onnx file
+5. Run app and  send `/start` to your bot
+
+## AI backend notes
+OpenCV DNN or CodeProject AI can be used to analyze video stream. Some notes to consider:
+- Both provides CUDA support
+- OpenCV DNN uses more RAM
+- Performance depends on hardware. CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
+- Compiling OpenCV with CUDA support for Windows is _really_ slow
 
 ## Configuration
 Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
@@ -51,6 +66,8 @@ Configuration is stored in `settings.json` file, and options are (mostly) self-e
 - `nth_detect_frame` - send every nth frame to AI. This helps to spare some system resources
 
 NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
+
+To use **multiple cameras** there's quick and dirty solution: command-line key `-c` (or `--config`) allows to set `settings.json` file by it's parameter. So it's possible to run several instances with different `source` variables.
 
 ## Compilation
 ### Requirements:
@@ -144,6 +161,18 @@ $ cd build
 $ cmake ..
 # Build generated project with your compiler, e. g. Visual Studio
 ```
+
+To compile with CUDA support some more steps needed, and different `cmake` command line is used:
+1. Download and install NVidia CUDA
+2. Download NVidia cudnn for the same CUDA version and unpack
+```
+# From 3rdparty dir:
+# Clone opencv_contrib:
+$ git clone https://github.com/opencv/opencv_contrib
+$ cmake .. -DWITH_CUDA=ON -DOPENCV_DNN_CUDA=ON -DOPENCV_EXTRA_MODULES_PATH="path/to/opencv_contrib/modules" -DCUDNN_LIBRARY="path/to/cudnn/lib/x64/cudnn.lib" -DCUDNN_INCLUDE_DIR="path/to/cudnn/include"
+$ cmake --build . -j16 --config Release
+```
+
 #### Build application:
 ```
 # From CameraAiDetector dir:
