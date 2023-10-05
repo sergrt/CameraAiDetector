@@ -6,16 +6,18 @@
     "cooldown_write_time_ms" : 5000,
     "buffer_overflow_strategy" : "delay",
 
+    "use_codeproject_ai" : true,
     "codeproject_ai_url" : "http://localhost:32168/v1/vision/custom/ipcam-general",
+    "onnx_file_path" : "yolov5s.onnx",
     "min_confidence" : 0.4,
     "nth_detect_frame" : 5,
     "use_image_scale" : true,
     "img_scale_x" : 0.5,
     "img_scale_y" : 0.5,
     "img_format" : "jpg",
-	"use_video_scale" : false,
-	"video_width" : 1024,
-	"video_height" : 576,
+    "use_video_scale" : false,
+    "video_width" : 1024,
+    "video_height" : 576,
 
     "bot_token" : "TOKEN",
     "allowed_users" : [
