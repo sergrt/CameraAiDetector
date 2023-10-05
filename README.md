@@ -41,21 +41,20 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
       - Download and install CodeProject AI from here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
       - Enable YOLOv5 from CodeProject AI dashboard - select one suitable for your platform
    2. OpenCV AI DNN:
-      - Download YOLOv5 onnx file (see "Releases" section) - yolov5s recommended
-      - (For CUDA) Download OpenCV_CUDA_libs (see "Releases" section)
-      - Replace application libs with CUDA-enabled libs
+      - Download YOLOv5 onnx file (see "Releases" section) - yolov5s is recommended
+      - (For CUDA support) Download OpenCV_CUDA_libs (see "Releases" section) and replace application libs with CUDA-enabled libs
 3. Create new Telegram bot and obtain bot token
 4. Update `settings.json` file. At least these parameters should be set:
    - `source` - video stream URL or video file path
    - `storage_path` - exisiting folder to store videos and images
    - `bot_token` - Telegram bot token
    - `allowed_users` - add yourself here
-   - in case OpenCV AI DNN is preffered, set `use_codeproject_ai` to false, and point `onnx_file_path` to onnx file
+   - in case OpenCV AI DNN is preffered, set `use_codeproject_ai` to `false`, and point `onnx_file_path` to onnx file
 5. Run app and  send `/start` to your bot
 
 ## AI backend notes
 OpenCV DNN or CodeProject AI can be used to analyze video stream. Some notes to consider:
-- Both provides CUDA support
+- Both provide CUDA support, but using CodeProject AI does not require to build OpenCV with CUDA support
 - OpenCV DNN uses more RAM
 - Performance depends on hardware. CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
 - Compiling OpenCV with CUDA support for Windows is _really_ slow
@@ -86,6 +85,8 @@ To use **multiple cameras** there's quick and dirty solution: command-line key `
 ### Linux
 Compilation for Linux is quite straightforward - any dependencies could be installed by distro packet manager, so just use cmake and make. The only thing that requires attention is tgbot-cpp (https://github.com/reo7sp/tgbot-cpp), with newer boost libraries it requires modification of it's `CMakeLists.txt`, see Windows installation section.
 Refer to [.github/workflows/cmake-multi-platform.yml](.github/workflows/cmake-multi-platform.yml) for complete set of commands.
+
+NB: OpenCV compilation with CUDA support is not covered in the workflow file.
 
 ### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
@@ -167,9 +168,11 @@ To compile with CUDA support some more steps needed, and different `cmake` comma
 2. Download NVidia cudnn for the same CUDA version and unpack
 ```
 # From 3rdparty dir:
-# Clone opencv_contrib:
+# Clone opencv_contrib
 $ git clone https://github.com/opencv/opencv_contrib
+# From opencv/build dir:
 $ cmake .. -DWITH_CUDA=ON -DOPENCV_DNN_CUDA=ON -DOPENCV_EXTRA_MODULES_PATH="path/to/opencv_contrib/modules" -DCUDNN_LIBRARY="path/to/cudnn/lib/x64/cudnn.lib" -DCUDNN_INCLUDE_DIR="path/to/cudnn/include"
+# Build generated project with your compiler, e. g. Visual Studio or by calling cmake:
 $ cmake --build . -j16 --config Release
 ```
 
@@ -188,4 +191,3 @@ For older compilers you need to alter code. Some things to consider:
 - use older stream instead of syncronized stream
 - remove `zoned_time` and use utc
 - something should be done with `std::filesystem`
-
