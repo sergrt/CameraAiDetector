@@ -20,7 +20,7 @@ public:
     }
 
     std::vector<T> dump() {
-        size_t begin = ring_filled_ ? begin = end_ : 0;  // end_ record still intact
+        size_t begin = ring_filled_ ? end_ : 0;  // end_ record still intact
         std::vector<T> res;
         if (!ring_filled_) {
             if (end_ - begin == 0)
