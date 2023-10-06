@@ -229,7 +229,6 @@ void Core::CaptureThreadFunc() {
         }
     }
     stop_ = true;
-    stop_.notify_all();
 }
 
 void Core::Start() {
@@ -239,7 +238,6 @@ void Core::Start() {
     }
 
     stop_ = false;
-    stop_.notify_all();
     capture_thread_ = std::jthread(&Core::CaptureThreadFunc, this);
     processing_thread_ = std::jthread(&Core::ProcessingThreadFunc, this);
 }
