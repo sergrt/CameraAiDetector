@@ -232,19 +232,27 @@ std::vector<Detection> OpenCvAiFacade::DetectImpl(const cv::Mat &input_image) {
 }
 
 bool OpenCvAiFacade::Detect(const cv::Mat &image, std::vector<Detection>& detections) {
-    const auto now = std::chrono::steady_clock::now();
+    const auto op_start = std::chrono::steady_clock::now();
+
     const auto img = FormatImageYolov5(image);
     detections = DetectImpl(img);
 
-    // Debug info
-    static int counter = 0;
-    static int ms = 0;
-    ms += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - now).count();
-    static const int interval = 25;
-    if (counter++ % interval == 0) {
-        LogDebug() << "Last " << std::to_string(interval) << " operations took avg time " << static_cast<int>(ms / interval) << " ms";
-        ms = 0;
+    // Debug performance
+    static int ms_total = 0;
+    ms_total += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - op_start).count();
+    static int frame_counter = 0;
+    ++frame_counter;
+
+    // Debug performance
+    if (ms_total >= 20'000) {  // Does not mean every 20 seconds - this is the pure processing time
+        LogDebug() << "For last " << std::to_string(frame_counter)
+                   << " operations avg operation time = " << static_cast<int>(ms_total / frame_counter) << " ms";
+        ms_total = 0;
+        frame_counter = 0;
     }
+    //
+
+    // Debug detections
     if (!detections.empty()) {
         std::string log_str = "Detections:\n";
         for (const auto& detection : detections) {
