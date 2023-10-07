@@ -7,14 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 IF (WIN32)
-  # Search prebuilt 3rd party dependencies in those folders
-  list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/boost")
-  list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/curl")
-  set(CURL_LIBRARY "${THIRDPARTY_DIR}/curl/build/lib/${CMAKE_BUILD_TYPE}")
-  list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/opencv/build")
-  list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/openssl")
+    # Search prebuilt 3rd party dependencies in those folders
+    list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/boost")
+    list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/curl")
+    set(CURL_LIBRARY "${THIRDPARTY_DIR}/curl/build/lib/${CMAKE_BUILD_TYPE}")
+    list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/opencv/build")
+    list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}/openssl")
 ELSE()
-  list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_DIR}")
 ENDIF()
 
 find_package(Boost REQUIRED)
@@ -40,51 +40,55 @@ set(TGBOT_ROOT_DIR "${THIRDPARTY_DIR}/tgbot-cpp")
 include_directories(${TGBOT_ROOT_DIR}/include)
 
 IF (WIN32)
-  link_directories(${TGBOT_ROOT_DIR}/build/${CMAKE_BUILD_TYPE})
+    link_directories(${TGBOT_ROOT_DIR}/build/${CMAKE_BUILD_TYPE})
 ELSE()
-  link_directories(${TGBOT_ROOT_DIR}/build)
+    link_directories(${TGBOT_ROOT_DIR}/build)
 ENDIF()
 
 set(SOURCE
-  CodeprojectAiFacade.cpp
-  Core.cpp
-  FrameReader.cpp
-  Log.cpp
-  main.cpp
-  OpenCvAiFacade.cpp
-  Settings.cpp
-  TelegramBot.cpp
-  VideoWriter.cpp)
+    CodeprojectAiFacade.cpp
+    Core.cpp
+    FrameReader.cpp
+    Log.cpp
+    main.cpp
+    OpenCvAiFacade.cpp
+    Settings.cpp
+    TelegramBot.cpp
+    VideoWriter.cpp)
 
 set(HEADER
-  Ai.h
-  CodeprojectAiFacade.h
-  Core.h
-  ErrorState.h
-  FinalAction.h
-  FrameReader.h
-  Helpers.h
-  Log.h
-  OpenCvAiFacade.h
-  RingBuffer.h
-  SafePtr.h
-  Settings.h
-  StreamProperties.h
-  TelegramBot.h
-  Translation.h
-  UidUtils.h
-  VideoWriter.h)
+    Ai.h
+    CodeprojectAiFacade.h
+    Core.h
+    ErrorState.h
+    FinalAction.h
+    FrameReader.h
+    Helpers.h
+    Log.h
+    OpenCvAiFacade.h
+    RingBuffer.h
+    SafePtr.h
+    Settings.h
+    StreamProperties.h
+    TelegramBot.h
+    Translation.h
+    UidUtils.h
+    VideoWriter.h)
 
 add_executable(${PROJECT_NAME} ${SOURCE} ${HEADER})
 
-IF (WIN32)
-  IF (CMAKE_BUILD_TYPE STREQUAL "Release")
-    SET(CURL_LIB_NAME libcurl_imp)
-  ELSE()
-    SET(CURL_LIB_NAME libcurl-d_imp)
-  ENDIF()
+IF (LANG_RU)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE LANG_RU=${LANG_RU})
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} TgBot ${CURL_LIB_NAME} OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS})
+IF (WIN32)
+    IF (CMAKE_BUILD_TYPE STREQUAL "Release")
+        SET(CURL_LIB_NAME libcurl_imp)
+    ELSE()
+        SET(CURL_LIB_NAME libcurl-d_imp)
+    ENDIF()
+
+    target_link_libraries(${PROJECT_NAME} TgBot ${CURL_LIB_NAME} OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS})
 ELSE()
-  target_link_libraries(${PROJECT_NAME} TgBot CURL::libcurl OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS} boost_program_options tbb)
+    target_link_libraries(${PROJECT_NAME} TgBot CURL::libcurl OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS} boost_program_options tbb)
 ENDIF()

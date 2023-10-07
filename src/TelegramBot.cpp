@@ -497,7 +497,6 @@ void TelegramBot::PostAnswerCallback(const std::string& callback_id) {
     queue_cv_.notify_one();
 }
 
-
 std::string TelegramBot::VideoCmdPrefix() {
     auto video_prefix = "/" + kVideoCmd + "_";
     return video_prefix;

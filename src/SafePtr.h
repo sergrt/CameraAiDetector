@@ -9,8 +9,14 @@ class SafePtr {
 private:
     class LockedPtr {
     public:
-        LockedPtr(T* const data, M& mutex) : lock_(mutex), data_(data) {}
+        LockedPtr(M& mutex, T* const data) : lock_(mutex), data_(data) {}
         LockedPtr(LockedPtr&& other) noexcept : lock_(std::move(other.lock_)), data_(other.data_) {}
+        LockedPtr& operator=(LockedPtr&& other) noexcept {
+            // Currently never used, but added to satisfy static analyzer
+            lock_ = std::move(other.lock_);
+            data_ = std::move(other.data_);
+            return *this;
+        }
         T* operator->() {
             return data_;
         }
@@ -27,10 +33,10 @@ public:
     SafePtr(Args... args) : mutex_(std::make_shared<M>()), data_(std::make_shared<T>(args...)) {}
 
     LockedPtr operator->() {
-        return LockedPtr(data_.get(), *mutex_);
+        return LockedPtr(*mutex_, data_.get());
     }
     const LockedPtr operator->() const {
-        return LockedPtr(data_.get(), *mutex_);
+        return LockedPtr(*mutex_, data_.get());
     }
 
 private:

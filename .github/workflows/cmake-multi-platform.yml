@@ -25,7 +25,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        build_type: [Release]
+        build_type: [Release, Release-RU]
         # c_compiler: [gcc, clang, cl]
         c_compiler: [gcc, clang]
         include:
@@ -168,6 +168,13 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+      env:
+        Lang_RU: False
+
+    - name: Set translation variable
+      if: endsWith(matrix.build_type, 'RU')
+      env:
+        Lang_RU: True
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -177,6 +184,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DLANG_RU=$Lang_RU
         -S ${{ github.workspace }}
 
     - name: Build
