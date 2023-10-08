@@ -56,8 +56,10 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
 OpenCV DNN or CodeProject AI can be used to analyze video stream. Some notes to consider:
 - Both provide CUDA support, but using CodeProject AI does not require to build OpenCV with CUDA support
 - OpenCV DNN uses more RAM
-- Performance depends on hardware. CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
-- Compiling OpenCV with CUDA support for Windows is _really_ slow
+- Performance depends on hardware and operating system:
+    - CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
+    - CPU calculations (on Linux systems) seem to perform better with OpenCV DNN. Benchmarking on low end mini-pc with Linux Ubuntu 22.04 shows that OpenCV DNN processes frame almost 1.5x faster
+- Compiling OpenCV with CUDA support is _really_ slow
 
 ## Configuration
 Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
@@ -87,6 +89,12 @@ Compilation for Linux is quite straightforward - any dependencies could be insta
 Refer to [.github/workflows/cmake-multi-platform.yml](.github/workflows/cmake-multi-platform.yml) for complete set of commands.
 
 NB: OpenCV compilation with CUDA support is not covered in the workflow file.
+
+You may want to compile recent version of OpenCV to use with supplied onnx models, something like this:
+```
+$ git clone https://github.com/opencv/opencv_contrib
+$ cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTALL_C_EXAMPLES=OFF -D INSTALL_PYTHON_EXAMPLES=OFF -D OPENCV_GENERATE_PKGCONFIG=ON -D BUILD_EXAMPLES=OFF -D OPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules ..
+```
 
 ### Windows
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
