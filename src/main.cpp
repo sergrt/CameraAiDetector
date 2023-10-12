@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     std::string command;
     while (true) {
         std::cin >> command;
-        if (command == "q") {
+        if (command == "q" || std::cin.fail() || std::cin.eof()) {
             std::cout << "Exiting..." << std::endl;
             core.Stop();
             break;
