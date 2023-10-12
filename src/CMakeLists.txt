@@ -75,7 +75,10 @@ set(HEADER
     UidUtils.h
     VideoWriter.h)
 
-add_executable(${PROJECT_NAME} ${SOURCE} ${HEADER})
+set(OTHER_FILES
+    settings.json)
+
+add_executable(${PROJECT_NAME} ${SOURCE} ${HEADER} ${OTHER_FILES})
 
 IF (LANG_RU)
     target_compile_definitions(${PROJECT_NAME} PRIVATE LANG_RU=${LANG_RU})
