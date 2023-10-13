@@ -73,7 +73,12 @@ std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) 
 }
 
 void Core::PostVideoPreview(const std::filesystem::path& file_path) {
-    bot_.PostVideoPreview({}, file_path);
+    bot_.PostVideoPreview(file_path);
+}
+
+void Core::PostVideo(const std::string& uid) {
+    const auto file_path = settings_.storage_path / VideoWriter::GenerateVideoFileName(uid);
+    bot_.PostVideo(file_path);
 }
 
 void Core::ProcessingThreadFunc() {
@@ -157,6 +162,8 @@ void Core::ProcessingThreadFunc() {
                             LogInfo() << "Finish writing file with uid = " << uid;
                             if (const auto preview_file_path = SaveVideoPreview(uid); settings_.send_video_previews)
                                 PostVideoPreview(preview_file_path);
+                            if (settings_.send_video)
+                                PostVideo(uid);
                             // Stop cooldown
                             video_writer_.reset();
                             first_cooldown_frame_timestamp_.reset();

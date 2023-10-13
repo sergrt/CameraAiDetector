@@ -39,6 +39,7 @@ struct Settings {
     std::set<uint64_t> allowed_users;  // allowed users
     size_t alarm_notification_delay_ms = 20'000;  // Delay before next telegram alarm
     bool send_video_previews = true;  // Send video preview as soon as video has been recorded
+    bool send_video = false;  // Send video right after recording
 
     // Log options
     int log_level = LogLevel::kInfo;  // Log level

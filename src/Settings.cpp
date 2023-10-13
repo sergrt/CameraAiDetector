@@ -56,6 +56,7 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.allowed_users = json["allowed_users"].get<std::set<uint64_t>>();
     settings.alarm_notification_delay_ms = json.value("alarm_notification_delay_ms", settings.alarm_notification_delay_ms);
     settings.send_video_previews = json.value("send_video_previews", settings.send_video_previews);
+    settings.send_video = json.value("send_video", settings.send_video);
 
     settings.log_level = StringToLogLevel(json.value("log_level", "Info"));
     settings.log_filename = json.value("log_filename", settings.log_filename);

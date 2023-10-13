@@ -38,6 +38,7 @@ private:
     void PostAlarmPhoto(const cv::Mat& frame);
     std::filesystem::path SaveVideoPreview(const std::string& video_file_uid);
     void PostVideoPreview(const std::filesystem::path& file_path);
+    void PostVideo(const std::string& uid);
 
     static void DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections);
     void InitVideoWriter();
