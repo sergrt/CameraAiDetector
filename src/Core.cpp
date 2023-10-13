@@ -6,8 +6,6 @@
 #include "Translation.h"
 #include "UidUtils.h"
 
-const cv::Scalar kFrameColor = cv::Scalar(0.0, 0.0, 200.0);
-constexpr int kFrameWidth = 2;
 constexpr size_t kMaxBufferSize = 500u;  // Approx 20 sec of 25 fps stream
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 
@@ -58,8 +56,9 @@ void Core::PostAlarmPhoto(const cv::Mat& frame) {
 } 
 
 void Core::DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections) {
+    static const cv::Scalar frame_color = {settings_.frame_color.R, settings_.frame_color.G, settings_.frame_color.B};
     for (const auto& detection : detections) {
-        cv::rectangle(frame, detection.box, kFrameColor, kFrameWidth);
+        cv::rectangle(frame, detection.box, frame_color, settings_.frame_width_px);
     }
 }
 

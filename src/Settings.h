@@ -12,6 +12,12 @@ enum class BufferOverflowStrategy {
 };
 
 struct Settings {
+    struct Color {
+        double R = 0.0;
+        double G = 0.0;
+        double B = 0.0;
+    };
+
     // General settings
     std::string source;  // Video source
     std::filesystem::path storage_path = "c:\\tmp";  // Storage for video and images
@@ -29,7 +35,9 @@ struct Settings {
     bool use_image_scale = true;  // Use image scale
     double img_scale_x = 0.5;  // Scale factor before sending to AI
     double img_scale_y = 0.5;  // Scale factor before sending to AI
-    std::string img_format = "jpg";  // any cv and mime compatible type
+    std::string img_format = "jpg";  // Any cv and mime compatible type
+    Color frame_color = {200.0, 0.0, 0.0};  // Color of the frame around object
+    int frame_width_px = 1;  // Width of frame line
     bool use_video_scale = true;  // Scale saved videos
     int video_width = 1024;  // Scaled video width
     int video_height = 576;  // Scaled video height

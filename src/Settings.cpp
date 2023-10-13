@@ -48,6 +48,8 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.img_scale_x = json.value("img_scale_x", settings.img_scale_x);
     settings.img_scale_y = json.value("img_scale_y", settings.img_scale_y);
     settings.img_format = json.value("img_format", settings.img_format);
+    settings.frame_color = {json["frame_color"]["R"], json["frame_color"]["G"], json["frame_color"]["B"]};
+    settings.frame_width_px = json.value("frame_width_px", settings.frame_width_px);
     settings.use_video_scale = json.value("use_video_scale", settings.use_video_scale);
     settings.video_width = json.value("video_width", settings.video_width);
     settings.video_height = json.value("video_height", settings.video_height );

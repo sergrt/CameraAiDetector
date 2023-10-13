@@ -15,6 +15,12 @@
     "img_scale_x": 0.5,
     "img_scale_y": 0.5,
     "img_format": "jpg",
+    "frame_color": {
+        "R": 80,
+        "G": 245,
+        "B": 95
+    },
+    "frame_width_px": 1,
     "use_video_scale": false,
     "video_width": 1024,
     "video_height": 576,

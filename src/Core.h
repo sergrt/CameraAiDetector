@@ -40,7 +40,7 @@ private:
     void PostVideoPreview(const std::filesystem::path& file_path);
     void PostVideo(const std::string& uid);
 
-    static void DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections);
+    void DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections);
     void InitVideoWriter();
     bool IsCooldownFinished() const;
     bool IsAlarmImageDelayPassed() const;
