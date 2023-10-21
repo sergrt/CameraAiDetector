@@ -55,7 +55,7 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
 ## AI backend notes
 OpenCV DNN or CodeProject AI can be used to analyze video stream. Some notes to consider:
 - Both provide CUDA support, but using CodeProject AI does not require to build OpenCV with CUDA support
-- OpenCV DNN uses more RAM
+- OpenCV DNN uses approx. 20% less RAM
 - Performance depends on hardware and operating system:
     - CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
     - CPU calculations (on Linux systems) seem to perform better with OpenCV DNN. Benchmarking on low end mini-pc with Linux Ubuntu 22.04 shows that OpenCV DNN processes frame almost 20% faster
