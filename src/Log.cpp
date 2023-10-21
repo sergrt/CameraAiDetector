@@ -60,7 +60,6 @@ Log::Log(LogLevel level)
 
 Log::~Log() {
     if (something_written_) {
-        // stream_ << std::endl;  // Useful for debug
         stream_ << "\n";
         AppLogTail->push(stream_.str());
     }

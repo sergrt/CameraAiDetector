@@ -25,6 +25,7 @@ public:
     template <typename T>
     StreamWrapper& operator<<(const T& data) {
         *stream_ << data;
+        // Flush for immediate results. Useful for debugging
         string_ += boost::lexical_cast<std::string>(data);
         return *this;
     }
