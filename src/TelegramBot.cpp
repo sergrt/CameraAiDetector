@@ -146,6 +146,10 @@ std::vector<VideoFileInfo> CollectVideoFileUids(const std::filesystem::path& sto
     return files;
 }
 
+std::chrono::system_clock::time_point GetDateTime(TgBot::Message::Ptr message) {
+    return std::chrono::system_clock::time_point(std::chrono::seconds(message->date));
+}
+
 }  // namespace
 
 TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users)
@@ -204,7 +208,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
         }
     });
     bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
-        LogInfo() << "Received callback query " << query->message->text << " from user " << query->message->chat->id;
+        LogInfo() << "Received callback query " << query->message->text << " from user " << query->message->chat->id << " @ " << GetDateTime(query->message);
         if (const auto id = query->message->chat->id; IsUserAllowed(id)) {
             const auto command = query->data.substr(1);  // Remove slash
             if (StringTools::startsWith(query->data, VideoCmdPrefix())) {
