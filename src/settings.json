@@ -31,6 +31,7 @@
         900000001
     ],
     "alarm_notification_delay_ms": 30000,
+    "preview_sampling_interval_ms": 2000,
     "send_video_previews": true,
     "send_video": false,
 

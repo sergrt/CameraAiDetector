@@ -2,6 +2,7 @@
 
 #include "Log.h"
 
+#include <chrono>
 #include <filesystem>
 #include <set>
 #include <string>
@@ -46,6 +47,7 @@ struct Settings {
     std::string bot_token;  // Keep this in secret
     std::set<uint64_t> allowed_users;  // allowed users
     size_t alarm_notification_delay_ms = 20'000;  // Delay before next telegram alarm
+    std::chrono::milliseconds preview_sampling_interval_ms = std::chrono::milliseconds(2'000);  // Images for preview are saved at this interval. Required number of preview images will be selected from the saved images
     bool send_video_previews = true;  // Send video preview as soon as video has been recorded
     bool send_video = false;  // Send video right after recording
 

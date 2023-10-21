@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Settings.h"
 #include "StreamProperties.h"
 
 #include <opencv2/opencv.hpp>
@@ -10,7 +11,7 @@
 
 class VideoWriter final {
 public:
-    VideoWriter(const std::filesystem::path& storage_path, const StreamProperties& in_properties, const StreamProperties& out_properties);
+    VideoWriter(const Settings& settings, const StreamProperties& in_properties, const StreamProperties& out_properties);
 
     void Write(const cv::Mat& frame);
 
@@ -28,6 +29,7 @@ private:
     const double scale_height_ = 1.0;
     const double scale_width_ = 1.0;
     const int scale_algorithm_ = cv::INTER_AREA;
+    const std::chrono::milliseconds preview_sampling_interval_ = std::chrono::milliseconds(2000);
 
     std::chrono::time_point<std::chrono::steady_clock> last_frame_time_;
     std::vector<cv::Mat> preview_frames_;

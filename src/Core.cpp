@@ -43,7 +43,7 @@ void Core::InitVideoWriter() {
         in_properties.fps,
         settings_.use_video_scale ? settings_.video_height : in_properties.height,
         settings_.use_video_scale ? settings_.video_width : in_properties.width};
-    video_writer_ = std::make_unique<VideoWriter>(settings_.storage_path, in_properties, out_properties);
+    video_writer_ = std::make_unique<VideoWriter>(settings_, in_properties, out_properties);
 }
 
 void Core::PostAlarmPhoto(const cv::Mat& frame) {

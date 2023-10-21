@@ -60,6 +60,7 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.bot_token = json.at("bot_token");
     settings.allowed_users = json.at("allowed_users").get<std::set<uint64_t>>();
     settings.alarm_notification_delay_ms = json.value("alarm_notification_delay_ms", settings.alarm_notification_delay_ms);
+    settings.preview_sampling_interval_ms = std::chrono::milliseconds(json.value("preview_sampling_interval_ms", settings.preview_sampling_interval_ms.count()));
     settings.send_video_previews = json.value("send_video_previews", settings.send_video_previews);
     settings.send_video = json.value("send_video", settings.send_video);
 
