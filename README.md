@@ -35,7 +35,7 @@ The application is written using C++, so it can be compiled on any supported pla
 List of videos (and previews) can be filtered by time depth. For example, use `/videos 30m` to get list of videos recorded for last 30 minutes. Supported suffixes are: `m` (minutes), `h` (hours) and `d` (days).
 
 ## Installation
-1. Download latest package from the "Releases" section
+1. Download latest package from the "Releases" section (or compile from sources) - Windows packages are available, linux compilation is rather simple and described in Compilation section
 2. Prepare AI backend. Choose one and setup:
    1. Codeproject AI:
       - Download and install CodeProject AI from here: https://www.codeproject.com/Articles/5322557/CodeProject-AI-Server-AI-the-easy-way
