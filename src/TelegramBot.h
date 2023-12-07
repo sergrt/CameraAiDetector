@@ -62,7 +62,7 @@ public:
 
 private:
     // Actual sending - should be called from one thread
-    void SendOnDemandPhoto(const std::filesystem::path& file_path);
+    void SendOnDemandPhoto(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
     void SendAlarmPhoto(const std::filesystem::path& file_path);
     void SendMessage(const std::string& message, const std::set<uint64_t>& recipients);
     void SendVideoPreview(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
@@ -90,7 +90,7 @@ private:
     std::atomic_bool stop_ = true;
 
     std::set<uint64_t> users_waiting_for_photo_;
-    std::mutex photo_mutex_;
+    mutable std::mutex photo_mutex_;
 
     std::deque<NotificationQueueItem> notification_queue_;
     std::jthread queue_thread_;

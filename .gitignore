@@ -40,3 +40,5 @@ gtest/
 3rdparty/
 .idea/
 cmake-*/
+latest/
+release/

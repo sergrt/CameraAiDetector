@@ -326,19 +326,14 @@ bool TelegramBot::IsUserAllowed(uint64_t user_id) const {
 }
 
 bool TelegramBot::SomeoneIsWaitingForPhoto() const {
+    std::lock_guard lock(photo_mutex_);
     return !users_waiting_for_photo_.empty();
 }
 
-void TelegramBot::SendOnDemandPhoto(const std::filesystem::path& file_path) {
+void TelegramBot::SendOnDemandPhoto(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients) {
     if (std::filesystem::exists(file_path)) {
         const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
         const auto caption = "&#128064; " + GetHumanDateTime(file_path.filename().generic_string());  // &#128064; - eyes
-
-        std::set<uint64_t> recipients;
-        {
-            std::lock_guard lock(photo_mutex_);
-            std::swap(recipients, users_waiting_for_photo_);
-        }
 
         for (const auto& user : recipients) {
             try {
@@ -440,8 +435,14 @@ void TelegramBot::SendAnswer(const std::string& callback_id) {
 
 void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
     {
+        std::set<uint64_t> recipients;
+        {
+            std::lock_guard lock(photo_mutex_);
+            std::swap(recipients, users_waiting_for_photo_);
+        }
+
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kOnDemandPhoto, "", file_path);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::kOnDemandPhoto, "", file_path, recipients);
     }
     queue_cv_.notify_one();
 }
@@ -536,7 +537,7 @@ void TelegramBot::QueueThreadFunc() {
         if (item.type == NotificationQueueItem::Type::kMessage) {
             SendMessage(item.payload, item.recipients);
         } else if (item.type == NotificationQueueItem::Type::kOnDemandPhoto) {
-            SendOnDemandPhoto(item.file_path);
+            SendOnDemandPhoto(item.file_path, item.recipients);
         } else if (item.type == NotificationQueueItem::Type::kAlarmPhoto) {
             SendAlarmPhoto(item.file_path);
         } else if (item.type == NotificationQueueItem::Type::kPreview) {
