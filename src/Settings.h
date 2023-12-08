@@ -54,6 +54,7 @@ struct Settings {
     // Log options
     int log_level = LogLevel::kInfo;  // Log level
     std::string log_filename = "debug.log";  // empty string for cout
+    bool notify_on_start = true;  // Send message when application starts
 };
 
 Settings LoadSettings(const std::string& settings_file_name);

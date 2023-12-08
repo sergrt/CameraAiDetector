@@ -12,7 +12,9 @@ constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 Core::Core(Settings settings)
     : settings_(std::move(settings))
     , frame_reader_(settings_.source)
-    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users) {
+    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users)
+    , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
+    , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
 
     if (settings_.use_codeproject_ai) {
         ai_ = std::make_unique<CodeprojectAiFacade>(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format);
@@ -21,6 +23,9 @@ Core::Core(Settings settings)
     }
     bot_.Start();
     frame_reader_.Open();
+
+    if (settings.notify_on_start)
+        bot_.PostMessage(translation::messages::kAppStarted);
 }
 
 Core::~Core() {
@@ -46,13 +51,23 @@ void Core::InitVideoWriter() {
     video_writer_ = std::make_unique<VideoWriter>(settings_, in_properties, out_properties);
 }
 
-void Core::PostAlarmPhoto(const cv::Mat& frame) {
+void Core::PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& detections) {
     last_alarm_photo_sent_ = std::chrono::steady_clock::now();
+
+    std::string classes_detected;
+    for (const auto& detection : detections) {
+        classes_detected += detection.class_name + ", ";
+    }
+    if (!classes_detected.empty()) {
+        classes_detected.erase(classes_detected.size() - 2, 2);  // last ", "
+    }
+
+
     const auto file_name = GenerateFileName("alarm_") + ".jpg";
     const auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), frame))
         LogError() << "Error write alarm photo, path = " << path;
-    bot_.PostAlarmPhoto(path);
+    bot_.PostAlarmPhoto(path, classes_detected);
 } 
 
 void Core::DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections) {
@@ -119,16 +134,7 @@ void Core::ProcessingThreadFunc() {
             std::vector<Detection> detections;
             const auto detect_result = ai_->Detect(settings_.use_image_scale ? scaled_frame : frame, detections);
             LogTrace() << "Detect result: " << detect_result;
-
-            if (!detect_result) {
-                if (!ai_error_.IsActive()) {
-                    bot_.PostMessage(translation::errors::kAiProcessingError);
-                    ai_error_.Activate(translation::errors::kAiProcessingRestored);
-                }
-            } else {
-                if (ai_error_.IsActive())
-                    bot_.PostMessage(ai_error_.Reset());
-            }
+            ai_error_.Update(detect_result ? ErrorReporter::ErrorState::kNoError : ErrorReporter::ErrorState::kError);
 
             if (detect_result && !detections.empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
@@ -144,7 +150,7 @@ void Core::ProcessingThreadFunc() {
                 if (video_uid != last_alarm_video_uid_ || IsAlarmImageDelayPassed()) {
                     auto& alarm_frame = settings_.use_image_scale ? scaled_frame : frame;
                     DrawBoxes(alarm_frame, detections);
-                    PostAlarmPhoto(alarm_frame);
+                    PostAlarmPhoto(alarm_frame, detections);
                     last_alarm_video_uid_ = video_uid;
                 }
             } else {  // Not detected
@@ -188,10 +194,7 @@ void Core::CaptureThreadFunc() {
         if (!frame_reader_.GetFrame(frame)) {
             ++get_frame_error_count_;
             LogError() << "Can't get frame";
-            if (!frame_reader_error_.IsActive()) {
-                bot_.PostMessage(translation::errors::kGetFrameError);
-                frame_reader_error_.Activate(translation::errors::kGetFrameRestored);
-            }
+            frame_reader_error_.Update(ErrorReporter::ErrorState::kError);
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
                 LogInfo() << "Reconnect";
@@ -202,9 +205,7 @@ void Core::CaptureThreadFunc() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
             }
         } else {
-            if (frame_reader_error_.IsActive()) {
-                bot_.PostMessage(frame_reader_error_.Reset());
-            }
+            frame_reader_error_.Update(ErrorReporter::ErrorState::kNoError);
             get_frame_error_count_ = 0;
             size_t buffer_size = 0;
             {

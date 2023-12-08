@@ -49,7 +49,7 @@ public:
 
     // Post to sending queue - thread safe
     void PostOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
-    void PostAlarmPhoto(const std::filesystem::path& file_path);  // No user id - goes to all users
+    void PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected);  // No user id - goes to all users
     void PostMessage(const std::string& message, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostVideoPreview(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostVideo(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
@@ -63,7 +63,7 @@ public:
 private:
     // Actual sending - should be called from one thread
     void SendOnDemandPhoto(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
-    void SendAlarmPhoto(const std::filesystem::path& file_path);
+    void SendAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected);
     void SendMessage(const std::string& message, const std::set<uint64_t>& recipients);
     void SendVideoPreview(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
     void SendVideo(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);

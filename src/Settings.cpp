@@ -66,6 +66,7 @@ Settings LoadSettings(const std::string& settings_file_name) {
 
     settings.log_level = StringToLogLevel(json.value("log_level", "Info"));
     settings.log_filename = json.value("log_filename", settings.log_filename);
+    settings.notify_on_start = json.value("notify_on_start", settings.notify_on_start);
 
     return settings;
 }

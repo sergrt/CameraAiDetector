@@ -48,6 +48,7 @@ ENDIF()
 set(SOURCE
     CodeprojectAiFacade.cpp
     Core.cpp
+    ErrorReporter.cpp
     FrameReader.cpp
     Log.cpp
     main.cpp
@@ -60,7 +61,7 @@ set(HEADER
     Ai.h
     CodeprojectAiFacade.h
     Core.h
-    ErrorState.h
+    ErrorReporter.h
     FinalAction.h
     FrameReader.h
     Helpers.h

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Ai.h"
-#include "ErrorState.h"
+#include "ErrorReporter.h"
 #include "FrameReader.h"
 #include "Settings.h"
 #include "TelegramBot.h"
@@ -35,7 +35,7 @@ private:
     void ProcessingThreadFunc();
 
     void PostOnDemandPhoto(const cv::Mat& frame);
-    void PostAlarmPhoto(const cv::Mat& frame);
+    void PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& detections);
     std::filesystem::path SaveVideoPreview(const std::string& video_file_uid);
     void PostVideoPreview(const std::filesystem::path& file_path);
     void PostVideo(const std::string& uid);
@@ -65,7 +65,6 @@ private:
 
     size_t get_frame_error_count_ = 0;
 
-    // Use error states in appropriate threads only, no sync is performed for the sake of performance
-    ErrorState ai_error_;
-    ErrorState frame_reader_error_;
+    ErrorReporter ai_error_;
+    ErrorReporter frame_reader_error_;
 };

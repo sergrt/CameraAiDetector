@@ -36,5 +36,6 @@
     "send_video": false,
 
     "log_level": "info",
-    "log_filename": ""
+    "log_filename": "",
+    "notify_on_start": true
 }

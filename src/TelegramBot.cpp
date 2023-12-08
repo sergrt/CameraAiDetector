@@ -346,10 +346,13 @@ void TelegramBot::SendOnDemandPhoto(const std::filesystem::path& file_path, cons
     }
 }
 
-void TelegramBot::SendAlarmPhoto(const std::filesystem::path& file_path) {
+void TelegramBot::SendAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
     if (std::filesystem::exists(file_path)) {
         const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto caption = "&#10071; " + GetHumanDateTime(file_path.filename().generic_string());  // &#10071; - red exclamation mark
+        const auto caption = "&#10071; "
+            + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
+            + (classes_detected.empty() ? "" : " (" + classes_detected + ")");
+
         for (const auto& user : allowed_users_) {
             try {
                 if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
@@ -447,10 +450,10 @@ void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
     queue_cv_.notify_one();
 }
 
-void TelegramBot::PostAlarmPhoto(const std::filesystem::path& file_path) {
+void TelegramBot::PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kAlarmPhoto, "", file_path);
+        notification_queue_.emplace_back(NotificationQueueItem::Type::kAlarmPhoto, classes_detected, file_path);
     }
     queue_cv_.notify_one();
 }
@@ -539,7 +542,7 @@ void TelegramBot::QueueThreadFunc() {
         } else if (item.type == NotificationQueueItem::Type::kOnDemandPhoto) {
             SendOnDemandPhoto(item.file_path, item.recipients);
         } else if (item.type == NotificationQueueItem::Type::kAlarmPhoto) {
-            SendAlarmPhoto(item.file_path);
+            SendAlarmPhoto(item.file_path, item.payload);
         } else if (item.type == NotificationQueueItem::Type::kPreview) {
             SendVideoPreview(item.file_path, item.recipients);
         } else if (item.type == NotificationQueueItem::Type::kVideo) {
