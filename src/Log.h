@@ -2,6 +2,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <chrono>
 #include <syncstream>
 #include <vector>
 
