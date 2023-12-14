@@ -78,3 +78,35 @@ void Log::WriteTimestamp() {
 void Log::WriteLevel() {
     stream_ << LogLevelToString(log_level_) << " ";
 }
+
+
+InstrumentCall::InstrumentCall(std::string name, uint64_t log_counter)
+    : log_counter_(log_counter)
+    , name_(std::move(name))
+    , use_counter_(true) {}
+
+InstrumentCall::InstrumentCall(std::string name, std::chrono::milliseconds log_interval)
+    : log_interval_(log_interval)
+    , name_(std::move(name))
+    , use_counter_(false) {}
+
+void InstrumentCall::Begin() {
+    begin_time_ = std::chrono::steady_clock::now();
+}
+
+void InstrumentCall::End() {
+    const auto end_time = std::chrono::steady_clock::now();
+    total_ms_ += std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time_);
+
+    ++counter_;
+    const bool ready_to_report = use_counter_ ? (counter_ == log_counter_) : (total_ms_.count() >= log_interval_.count());
+    if (ready_to_report) {
+        PrintInfo();
+        counter_ = 0u;
+        total_ms_ = std::chrono::milliseconds(0);
+    }
+}
+
+void InstrumentCall::PrintInfo() const {
+    LogDebug() << "[INSTR] " << name_ << ": avg time for " << counter_ << " runs = " << total_ms_.count() / counter_ << " ms";
+}

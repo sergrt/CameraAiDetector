@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Ai.h"
+#include "Log.h"
 
 #include <filesystem>
 #include <vector>
@@ -21,4 +22,5 @@ private:
 
     const float min_confidence_;
     cv::dnn::Net net_;
+    InstrumentCall instrument_detect_impl_;
 };

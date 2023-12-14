@@ -106,3 +106,21 @@ inline Log LogWarning() {
 inline Log LogError() {
     return Log(kError);
 }
+
+struct InstrumentCall {
+    InstrumentCall(std::string name, uint64_t log_counter);
+    InstrumentCall(std::string name, std::chrono::milliseconds log_interval);
+
+    void Begin();
+    void End();
+    void PrintInfo() const;
+
+private:
+    std::chrono::milliseconds total_ms_ = std::chrono::milliseconds(0);
+    uint64_t counter_ = 0u;
+    uint64_t log_counter_ = 100u;
+    std::chrono::milliseconds log_interval_ = std::chrono::milliseconds(20'000);
+    std::string name_;
+    bool use_counter_ = true;
+    std::chrono::time_point<std::chrono::steady_clock> begin_time_ = std::chrono::steady_clock::now();
+};
