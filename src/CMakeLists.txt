@@ -54,6 +54,7 @@ set(SOURCE
     main.cpp
     OpenCvAiFacade.cpp
     Settings.cpp
+    SimpleMotionDetect.cpp
     TelegramBot.cpp
     VideoWriter.cpp)
 
@@ -70,6 +71,7 @@ set(HEADER
     RingBuffer.h
     SafePtr.h
     Settings.h
+    SimpleMotionDetect.h
     StreamProperties.h
     TelegramBot.h
     Translation.h

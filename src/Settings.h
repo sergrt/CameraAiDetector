@@ -12,11 +12,22 @@ enum class BufferOverflowStrategy {
     kDropHalf  // Drop half of buffer
 };
 
+enum class DetectionEngine {
+    kCodeprojectAi,
+    kOpenCv,
+    kSimple
+};
+
 struct Settings {
     struct Color {
         double R = 0.0;
         double G = 0.0;
         double B = 0.0;
+    };
+    struct MotionDetectSettings {
+        int gaussian_blur_sz = 20;
+        int threshold = 15;
+        int area_trigger = 150;
     };
 
     // General settings
@@ -28,10 +39,11 @@ struct Settings {
 
     BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::kDelay;
 
-    bool use_codeproject_ai = true;
+    DetectionEngine detection_engine = DetectionEngine::kCodeprojectAi;
     std::string codeproject_ai_url = "http://localhost:32168/v1/vision/custom/ipcam-general";
     std::string onnx_file_path = "yolov5s.onnx";
     float min_confidence = 0.4;  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
+    MotionDetectSettings motion_detect_settings;
     int nth_detect_frame = 10;  // Perform detect on every nth frame
     bool use_image_scale = true;  // Use image scale
     double img_scale_x = 0.5;  // Scale factor before sending to AI

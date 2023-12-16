@@ -3,6 +3,7 @@
 #include "CodeprojectAiFacade.h"
 #include "Log.h"
 #include "OpenCvAiFacade.h"
+#include "SimpleMotionDetect.h"
 #include "Translation.h"
 #include "UidUtils.h"
 
@@ -15,11 +16,13 @@ Core::Core(Settings settings)
     , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users)
     , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
     , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
-
-    if (settings_.use_codeproject_ai) {
+    
+    if (settings_.detection_engine == DetectionEngine::kCodeprojectAi) {
         ai_ = std::make_unique<CodeprojectAiFacade>(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format);
-    } else {
+    } else if (settings_.detection_engine == DetectionEngine::kOpenCv) {
         ai_ = std::make_unique<OpenCvAiFacade>(settings_.onnx_file_path, settings_.min_confidence);
+    } else if (settings_.detection_engine == DetectionEngine::kSimple) {
+        ai_ = std::make_unique<SimpleMotionDetect>(settings_.motion_detect_settings);
     }
     bot_.Start();
     frame_reader_.Open();
@@ -129,7 +132,7 @@ void Core::ProcessingThreadFunc() {
         if (check_frame) {
             cv::Mat scaled_frame;
             if (settings_.use_image_scale)
-                cv::resize(frame, scaled_frame, scaled_size);
+                cv::resize(frame, scaled_frame, scaled_size, cv::INTER_AREA);  // TODO: Check performance
 
             std::vector<Detection> detections;
             const auto detect_result = ai_->Detect(settings_.use_image_scale ? scaled_frame : frame, detections);
@@ -199,7 +202,7 @@ void Core::CaptureThreadFunc() {
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
                 LogInfo() << "Reconnect";
                 get_frame_error_count_ = 0;
-                frame_reader_.Reconnect();
+                //frame_reader_.Reconnect();
             } else {
                 LogInfo() << "Delay after error, error count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));

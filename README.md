@@ -4,6 +4,7 @@ AI-powered detection/notification system for cameras and video files
 This application is based on YOLOv5 object detection engine, and performs the following:
 - Capture video stream (from camera - e.g. **rtsp**, or any **video file** or source, supported by OpenCV)
 - Detect objects using AI - persons, animals, vehicles, bicycles etc.
+- Detect objects using simple motion detection (useful for low-end systems)
 - Send notifications via Telegram
 - Save video based on detection
 - Serve some handy Telegram requests - on-demand images, video download etc.
@@ -43,8 +44,14 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
    2. OpenCV AI DNN:
       - Download YOLOv5 onnx file (see "Releases" section) - yolov5s is recommended
       - (For CUDA support) Download OpenCV_CUDA_libs (see "Releases" section) and replace application libs with CUDA-enabled libs
+   3. Simple movement detection
+      - No special prerequisites are required, but some tweaks of settings file might be necessary
 3. Create new Telegram bot and obtain bot token
 4. Update `settings.json` file. At least these parameters should be set:
+   - `detection_engine` - selected engine. Valid values are:
+     - `CodeprojectAI` - CodeProject AI engine
+     - `OpenCV` - OpenCV engine
+     - `Simple` - simple motion detection engine
    - `source` - video stream URL or video file path
    - `storage_path` - exisiting folder to store videos and images
    - `bot_token` - Telegram bot token
@@ -53,18 +60,24 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
 5. Run app and  send `/start` to your bot
 
 ## AI backend notes
-OpenCV DNN or CodeProject AI can be used to analyze video stream. Some notes to consider:
-- Both provide CUDA support, but using CodeProject AI does not require to build OpenCV with CUDA support
-- OpenCV DNN uses approx. 20% less RAM
+OpenCV DNN, CodeProject AI or Simple motion detection can be used to analyze video stream. Some notes to consider:
+- OpenCV and CodeProject AI provide CUDA support, but using CodeProject AI does not require to build OpenCV with CUDA support
+- OpenCV DNN uses approx. 20% less RAM than CodeProject AI
 - Performance depends on hardware and operating system:
     - CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
     - CPU calculations (on Linux systems) seem to perform better with OpenCV DNN. Benchmarking on low end mini-pc with Linux Ubuntu 22.04 shows that OpenCV DNN processes frame almost 20% faster
+    - Simple motion detection is the fastest and is recommended for low-end systems
 - Compiling OpenCV with CUDA support is _really_ slow
 
 ## Configuration
 Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
 - `cooldown_write_time_ms` - time (in milliseconds) to write after object disappears
 - `nth_detect_frame` - send every nth frame to AI. This helps to spare some system resources
+
+Simple motion detection has some non-obvious settings:
+- `gaussian_blur_sz` - part of image processing. The larger value the less smaller objects detected
+- `threshold` - movement "heatmap" is processed based on this value. The larger value the less sensitive detection is
+- `area_trigger` - size of objects to be detected. Larger value specifies more movement in frame. Useful for filtering out timestamps
 
 NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
 

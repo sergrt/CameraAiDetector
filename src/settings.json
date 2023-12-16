@@ -6,10 +6,15 @@
     "cooldown_write_time_ms": 5000,
     "buffer_overflow_strategy": "delay",
 
-    "use_codeproject_ai": true,
+    "detection_engine": "CodeprojectAI",
     "codeproject_ai_url": "http://localhost:32168/v1/vision/custom/ipcam-general",
     "onnx_file_path": "yolov5s.onnx",
     "min_confidence": 0.4,
+    "motion_detect_settings" : {
+        "gaussian_blur_sz" : 20,
+        "threshold" : 15,
+        "area_trigger" : 150
+    },
     "nth_detect_frame": 5,
     "use_image_scale": true,
     "img_scale_x": 0.5,

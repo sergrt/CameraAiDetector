@@ -12,12 +12,25 @@ const std::map<std::string, BufferOverflowStrategy> kStrToBufferStrategy = {
     {"DROPHALF", BufferOverflowStrategy::kDropHalf}
 };
 
+const std::map<std::string, DetectionEngine> kStrToDetectionEngine = {
+    {"CODEPROJECTAI", DetectionEngine::kCodeprojectAi},
+    {"OPENCV", DetectionEngine::kOpenCv},
+    {"SIMPLE", DetectionEngine::kSimple}
+};
+
 namespace {
 
 BufferOverflowStrategy StringToBufferStrategy(const std::string& str) {
     const auto it = kStrToBufferStrategy.find(ToUpper(str));
     if (it == end(kStrToBufferStrategy))
         throw std::runtime_error("Unknown buffer overflow strategy string specified");
+    return it->second;
+}
+
+DetectionEngine StringToDetectionEngine(const std::string& str) {
+    const auto it = kStrToDetectionEngine.find(ToUpper(str));
+    if (it == end(kStrToDetectionEngine))
+        throw std::runtime_error("Unknown detection engine string specified");
     return it->second;
 }
 
@@ -39,10 +52,20 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.cooldown_write_time_ms = json.value("cooldown_write_time_ms", settings.cooldown_write_time_ms);
     settings.buffer_overflow_strategy = StringToBufferStrategy(json.value("buffer_overflow_strategy", "Delay"));
 
-    settings.use_codeproject_ai = json.value("use_codeproject_ai", settings.use_codeproject_ai);
+    settings.detection_engine = StringToDetectionEngine(json.value("detection_engine", "CodeprojectAI"));
     settings.codeproject_ai_url = json.value("codeproject_ai_url", settings.codeproject_ai_url);
     settings.onnx_file_path = json.value("onnx_file_path", settings.onnx_file_path);
     settings.min_confidence = json.value("min_confidence", 0.4);
+
+    if (json.contains("motion_detect_settings")) {
+        const auto motion_detect_settings = json["motion_detect_settings"];
+        settings.motion_detect_settings = {
+            motion_detect_settings.at("gaussian_blur_sz"),
+            motion_detect_settings.at("threshold"),
+            motion_detect_settings.at("area_trigger"),
+        };
+    }
+
     settings.nth_detect_frame = json.value("nth_detect_frame", settings.nth_detect_frame);
     settings.use_image_scale = json.value("use_image_scale", settings.use_image_scale);
     settings.img_scale_x = json.value("img_scale_x", settings.img_scale_x);
