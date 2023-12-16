@@ -202,7 +202,7 @@ void Core::CaptureThreadFunc() {
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
                 LogInfo() << "Reconnect";
                 get_frame_error_count_ = 0;
-                //frame_reader_.Reconnect();
+                frame_reader_.Reconnect();
             } else {
                 LogInfo() << "Delay after error, error count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
