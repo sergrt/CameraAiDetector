@@ -90,6 +90,12 @@ InstrumentCall::InstrumentCall(std::string name, std::chrono::milliseconds log_i
     , name_(std::move(name))
     , use_counter_(false) {}
 
+FinalAction<std::function<void()>> InstrumentCall::Trigger() {
+    begin_time_ = std::chrono::steady_clock::now();
+
+    return FinalAction<std::function<void()>>(std::bind(&InstrumentCall::End, this));
+}
+
 void InstrumentCall::Begin() {
     begin_time_ = std::chrono::steady_clock::now();
 }

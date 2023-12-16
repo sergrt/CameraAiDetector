@@ -1,8 +1,11 @@
 #pragma once
 
+#include "FinalAction.h"
+
 #include <boost/lexical_cast.hpp>
 
 #include <chrono>
+#include <functional>
 #include <syncstream>
 #include <vector>
 
@@ -112,6 +115,7 @@ struct InstrumentCall {
     InstrumentCall(std::string name, uint64_t log_counter);
     InstrumentCall(std::string name, std::chrono::milliseconds log_interval);
 
+    [[nodiscard]] FinalAction<std::function<void()>> Trigger();
     void Begin();
     void End();
     void PrintInfo() const;
