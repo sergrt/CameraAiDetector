@@ -61,6 +61,7 @@ Log::Log(LogLevel level)
 Log::~Log() {
     if (something_written_) {
         stream_ << "\n";
+        stream_.flush();
         AppLogTail->push(stream_.str());
     }
 }

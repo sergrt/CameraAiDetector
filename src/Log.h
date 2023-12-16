@@ -34,6 +34,10 @@ public:
         return *this;
     }
 
+    void flush() {
+        stream_->flush();
+    }
+
     std::string str() const {
         return string_;
     }
