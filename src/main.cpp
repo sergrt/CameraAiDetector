@@ -7,7 +7,7 @@
 
 #include <boost/program_options.hpp>
 
-#include <memory>
+#include <chrono>
 #include <string>
 
 LogLevel kAppLogLevel = LogLevel::kInfo;
@@ -15,6 +15,7 @@ std::ostream* kAppLogStream = nullptr;
 constexpr size_t kLogTailLines = 32u;
 SafePtr<RingBuffer<std::string>> AppLogTail(kLogTailLines);
 constexpr auto kSettingsFileName = "settings.json";
+std::chrono::time_point<std::chrono::steady_clock> kStartTime = std::chrono::steady_clock::now();
 
 int main(int argc, char* argv[]) {
     namespace po = boost::program_options;

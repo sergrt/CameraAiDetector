@@ -9,6 +9,7 @@
 #include "VideoWriter.h"
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <regex>
 
@@ -22,6 +23,7 @@ const auto kPingCmd = std::string("ping");
 const auto kLogCmd = std::string("log");
 
 extern SafePtr<RingBuffer<std::string>> AppLogTail;
+extern std::chrono::time_point<std::chrono::steady_clock> kStartTime;
 
 namespace {
 
@@ -115,6 +117,16 @@ void LogException(const std::string& description, const std::string& file, int l
     LogError() << description << ": " << file << ":" << line << ": " << what;
 }
 
+std::string GetUptime() {
+    const auto diff_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - kStartTime).count();
+    auto formatted = std::format("{:01}d {:02}:{:02}:{:02}"
+        , diff_s / 86'400
+        , (diff_s % 86'400) / 3'600
+        , (diff_s % 3'600) / 60
+        , diff_s % 60);
+    return formatted;
+}
+
 std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
     const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
     std::string timestamp = std::format("{:%d-%m-%Y %H:%M:%S}", cur_time);
@@ -125,7 +137,9 @@ std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
         free_space.insert(i, "'");
     }
     // Some useful utf chars: &#9989; &#127909; &#128247; &#128680; &#128226; &#128266; &#10071; &#128681; &#8505; &#127916; &#127910; &#128064;
-    return "&#8505; " + timestamp + ", " + free_space + " MB " + translation::messages::kAvailable;
+    return "&#8505; " + timestamp + ",\n"
+        + free_space + " MB " + translation::messages::kAvailable + ",\n"
+        + GetUptime() + " " +  translation::messages::kUptime;
 }
 
 struct VideoFileInfo {
