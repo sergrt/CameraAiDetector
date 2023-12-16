@@ -11,7 +11,7 @@
     "onnx_file_path": "yolov5s.onnx",
     "min_confidence": 0.4,
     "motion_detect_settings" : {
-        "gaussian_blur_sz" : 20,
+        "gaussian_blur_sz" : 21,
         "threshold" : 15,
         "area_trigger" : 150
     },
