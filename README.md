@@ -4,7 +4,7 @@ AI-powered detection/notification system for cameras and video files
 This application is based on YOLOv5 object detection engine, and performs the following:
 - Capture video stream (from camera - e.g. **rtsp**, or any **video file** or source, supported by OpenCV)
 - Detect objects using **AI** - persons, animals, vehicles, bicycles etc.
-- Detect objects using **simple motion detection** (useful for low-end systems)
+- Detect objects using **simple motion detection** (usable on low-end systems)
 - Send notifications via Telegram
 - Save video based on detection
 - Serve some handy Telegram requests - on-demand images, video download etc.
