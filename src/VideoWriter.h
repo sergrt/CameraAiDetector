@@ -22,6 +22,9 @@ public:
     static std::string GeneratePreviewFileName(const std::string& uid);
     static std::string GenerateVideoFileName(const std::string& uid);
 
+    static std::string kVideoCodec;
+    static std::string kVideoFileExtension;
+
 private:
     cv::VideoWriter writer_;
     std::string uid_;

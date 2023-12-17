@@ -79,6 +79,8 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.use_video_scale = json.value("use_video_scale", settings.use_video_scale);
     settings.video_width = json.value("video_width", settings.video_width);
     settings.video_height = json.value("video_height", settings.video_height );
+    settings.video_codec = json.value("video_codec", settings.video_codec);
+    settings.video_container = json.value("video_container", settings.video_container);
 
     settings.bot_token = json.at("bot_token");
     settings.allowed_users = json.at("allowed_users").get<std::set<uint64_t>>();

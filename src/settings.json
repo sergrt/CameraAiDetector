@@ -10,10 +10,10 @@
     "codeproject_ai_url": "http://localhost:32168/v1/vision/custom/ipcam-general",
     "onnx_file_path": "yolov5s.onnx",
     "min_confidence": 0.4,
-    "motion_detect_settings" : {
-        "gaussian_blur_sz" : 21,
-        "threshold" : 15,
-        "area_trigger" : 150
+    "motion_detect_settings": {
+        "gaussian_blur_sz": 21,
+        "threshold": 15,
+        "area_trigger": 150
     },
     "nth_detect_frame": 5,
     "use_image_scale": true,
@@ -29,6 +29,8 @@
     "use_video_scale": false,
     "video_width": 1024,
     "video_height": 576,
+    "video_codec": "avc1",
+    "video_container": "mp4",
 
     "bot_token": "TOKEN",
     "allowed_users": [

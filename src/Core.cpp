@@ -24,10 +24,14 @@ Core::Core(Settings settings)
     } else if (settings_.detection_engine == DetectionEngine::kSimple) {
         ai_ = std::make_unique<SimpleMotionDetect>(settings_.motion_detect_settings);
     }
+
+    VideoWriter::kVideoCodec = settings_.video_codec;
+    VideoWriter::kVideoFileExtension = "." + settings_.video_container;
+
     bot_.Start();
     frame_reader_.Open();
 
-    if (settings.notify_on_start)
+    if (settings_.notify_on_start)
         bot_.PostMessage(translation::messages::kAppStarted);
 }
 

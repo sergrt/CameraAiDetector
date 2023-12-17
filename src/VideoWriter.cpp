@@ -5,11 +5,12 @@
 
 #include <stdexcept>
 
-const auto kFourcc = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
 constexpr size_t kInitialBufferSize = 120;  // Some reasonable value to fit frames without reallocate too often
 constexpr size_t kPreviewImages = 9;  // 3x3 grid. Should be square number
 constexpr auto kVideoFilePrefix = "v_";
-constexpr auto kVideoFileExtension = ".mp4";
+
+std::string VideoWriter::kVideoCodec = "avc1";
+std::string VideoWriter::kVideoFileExtension = ".mp4";
 
 namespace {
 
@@ -28,7 +29,14 @@ VideoWriter::VideoWriter(const Settings& settings, const StreamProperties& in_pr
     , scale_algorithm_(scale_width_ < 1.0 ? cv::INTER_AREA : cv::INTER_LANCZOS4)
     , preview_sampling_interval_(settings.preview_sampling_interval_ms) {
     const auto file_name = GenerateFileName(kVideoFilePrefix, &uid_) + kVideoFileExtension;
-    if (!writer_.open((settings.storage_path / file_name).generic_string(), kFourcc, out_properties.fps, cv::Size(out_properties.width, out_properties.height))) {
+    if (kVideoCodec.size() != 4) {
+        const auto msg = "Invalid codec specified: " + kVideoCodec;
+        LogError() << msg;
+        throw std::runtime_error(msg);
+    }
+
+    const auto four_cc = cv::VideoWriter::fourcc(kVideoCodec[0], kVideoCodec[1], kVideoCodec[2], kVideoCodec[3]);
+    if (!writer_.open((settings.storage_path / file_name).generic_string(), four_cc, out_properties.fps, cv::Size(out_properties.width, out_properties.height))) {
         const auto msg = "Unable to open file for writing: " + file_name;
         LogError() << msg;
         throw std::runtime_error(msg);

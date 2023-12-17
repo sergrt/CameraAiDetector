@@ -79,6 +79,8 @@ Simple motion detection has some non-obvious settings:
 - `threshold` - movement "heatmap" is processed based on this value. The larger value the less sensitive detection is
 - `area_trigger` - size of objects to be detected. Larger value specifies more movement in frame. Useful for filtering out timestamps
 
+Some low-end systems might benefit from tweaking `video_codec`. `mp4v` performs better than `avc1`, some other might be even faster.
+
 NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
 
 To use **multiple cameras** there's quick and dirty solution: command-line key `-c` (or `--config`) allows to set `settings.json` file by it's parameter. So it's possible to run several instances with different `source` variables.

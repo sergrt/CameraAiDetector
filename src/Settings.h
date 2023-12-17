@@ -54,6 +54,8 @@ struct Settings {
     bool use_video_scale = true;  // Scale saved videos
     int video_width = 1024;  // Scaled video width
     int video_height = 576;  // Scaled video height
+    std::string video_codec = "avc1";  // Codec for video output
+    std::string video_container = "mp4";  // Container for video output
 
     // Telegram bot preferences
     std::string bot_token;  // Keep this in secret
