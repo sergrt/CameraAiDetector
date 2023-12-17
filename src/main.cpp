@@ -7,6 +7,10 @@
 
 #include <boost/program_options.hpp>
 
+#ifdef __linux__
+#include "unistd.h"
+#endif
+
 #include <chrono>
 #include <string>
 
@@ -66,7 +70,14 @@ int main(int argc, char* argv[]) {
 
     std::string command;
     while (true) {
+#ifdef __linux__
+        if (isatty(fileno(stdin)))
+            std::cin >> command;
+	else
+            std::this_thread::sleep_for(std::chrono::minutes(1));
+#else
         std::cin >> command;
+#endif
         if (command == "q" || std::cin.fail() || std::cin.eof()) {
             std::cout << "Exiting..." << std::endl;
             core.Stop();
