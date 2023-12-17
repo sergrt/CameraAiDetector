@@ -5,6 +5,8 @@
 #include <limits>
 #include <vector>
 
+constexpr bool kUseTrigger = true;
+
 SimpleMotionDetect::SimpleMotionDetect(const Settings::MotionDetectSettings& settings)
     : gaussian_sz_(cv::Size(settings.gaussian_blur_sz, settings.gaussian_blur_sz))
     , threshold_(settings.threshold)
@@ -32,6 +34,16 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    if (kUseTrigger) {
+        // Skip first frame in case frame is corrupted
+        const bool already_triggered = triggered_;
+        triggered_ = !contours.empty();
+        if (!already_triggered && triggered_) {
+            // Don't save frame as prev, because it might be corrupted one
+            return true;
+        }
+    }
 
     for (size_t i = 0, sz = contours.size(); i < sz; i++) {
         if (cv::contourArea(contours[i]) < area_trigger_)

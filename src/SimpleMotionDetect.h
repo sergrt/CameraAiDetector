@@ -25,4 +25,5 @@ private:
     int area_trigger_ = 150;
     InstrumentCall instrument_detect_impl_;
     cv::Mat prev_frame_;
+    bool triggered_ = false;
 };
