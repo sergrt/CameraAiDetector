@@ -69,9 +69,11 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
                 max_y = contour[j].y;
         }
 
-        detections.emplace_back("generic",
+        const auto rect = cv::Rect(cv::Point(min_x, min_y), cv::Point(max_x, max_y));
+        const auto area_str = std::to_string(rect.area());
+        detections.emplace_back(area_str,
             1.0f,
-            cv::Rect(cv::Point(min_x, min_y), cv::Point(max_x, max_y)));
+            rect);
     }
     prev_frame_ = gray;
     return true;
