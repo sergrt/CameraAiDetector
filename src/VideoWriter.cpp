@@ -84,16 +84,16 @@ cv::Mat VideoWriter::GetPreviewImage() const {
     LogInfo() << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
-    const auto images_in_row = static_cast<int>(std::sqrt(kPreviewImages));
+    constexpr auto images_in_row = static_cast<int>(std::sqrt(kPreviewImages));
     for (size_t i = 0 ; i < kPreviewImages; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
             LogDebug() << "Add row, i = " << i;
             rows.push_back(preview_frames_[idx]);
-        } else {
-            auto& row = rows.back();
-            cv::hconcat(row, preview_frames_[idx], row);
         }
+
+        auto& row = rows.back();
+        cv::hconcat(row, preview_frames_[idx], row);
     }
 
     cv::Mat result = rows[0];
