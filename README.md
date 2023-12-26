@@ -81,6 +81,8 @@ Simple motion detection has some non-obvious settings:
 
 Some low-end systems might benefit from tweaking `video_codec`. `mp4v` performs better than `avc1`, some other might be even faster.
 
+To free up some resources on video encoding there's `decrease_detect_rate_while_writing` option. If set to `true` then the frames are checked less frequently when an alarm was triggered and video is being written.
+
 NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
 
 To use **multiple cameras** there's quick and dirty solution: command-line key `-c` (or `--config`) allows to set `settings.json` file by it's parameter. So it's possible to run several instances with different `source` variables.

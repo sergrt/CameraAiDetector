@@ -9,6 +9,7 @@
 
 constexpr size_t kMaxBufferSize = 500u;  // Approx 20 sec of 25 fps stream
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
+constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);
 
 Core::Core(Settings settings)
     : settings_(std::move(settings))
@@ -124,7 +125,15 @@ void Core::ProcessingThreadFunc() {
             PostOnDemandPhoto(frame);
 
         static uint64_t i = 0;
-        const bool check_frame = (i++ % settings_.nth_detect_frame == 0);
+        bool check_frame = (i++ % settings_.nth_detect_frame == 0);
+
+        // Check if decreased check rate is used and alter check_frame if needed
+        if (check_frame && video_writer_
+            && settings_.decrease_detect_rate_while_writing
+            && std::chrono::steady_clock::now() - last_checked_frame_ < kDecreasedCheckFrameInterval) {
+
+            check_frame = false;
+        }
 
         if (!check_frame) {
             if (video_writer_) {
@@ -134,6 +143,7 @@ void Core::ProcessingThreadFunc() {
         }
 
         if (check_frame) {
+            last_checked_frame_ = std::chrono::steady_clock::now();
             cv::Mat scaled_frame;
             if (settings_.use_image_scale)
                 cv::resize(frame, scaled_frame, scaled_size, cv::INTER_AREA);  // TODO: Check performance

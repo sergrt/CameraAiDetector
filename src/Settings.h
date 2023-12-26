@@ -56,6 +56,7 @@ struct Settings {
     int video_height = 576;  // Scaled video height
     std::string video_codec = "avc1";  // Codec for video output
     std::string video_container = "mp4";  // Container for video output
+    bool decrease_detect_rate_while_writing = false;  // Override nth_detect_frame - pass to Engine 1 frame per second approx.
 
     // Telegram bot preferences
     std::string bot_token;  // Keep this in secret
