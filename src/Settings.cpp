@@ -68,6 +68,13 @@ Settings LoadSettings(const std::string& settings_file_name) {
         };
     }
 
+    if (json.contains("hybrid_detect_settings")) {
+        const auto hybrid_detect_settings = json["hybrid_detect_settings"];
+        settings.hybrid_detect_settings = {
+            std::chrono::milliseconds(hybrid_detect_settings.at("min_ai_detect_interval_ms"))
+        };
+    }
+
     settings.nth_detect_frame = json.value("nth_detect_frame", settings.nth_detect_frame);
     settings.use_image_scale = json.value("use_image_scale", settings.use_image_scale);
     settings.img_scale_x = json.value("img_scale_x", settings.img_scale_x);
