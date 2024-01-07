@@ -7,6 +7,7 @@
 #include "SimpleMotionDetect.h"
 
 #include <memory>
+#include <stdexcept>
 
 inline std::unique_ptr<Ai> AiFactory(const Settings& settings) {
     if (settings.detection_engine == DetectionEngine::kCodeprojectAi) {
@@ -17,5 +18,7 @@ inline std::unique_ptr<Ai> AiFactory(const Settings& settings) {
         return std::make_unique<SimpleMotionDetect>(settings.motion_detect_settings);
     } else if (settings.detection_engine == DetectionEngine::kHybridCodeprojectAi || settings.detection_engine == DetectionEngine::kHybridOpenCv) {
         return std::make_unique<HybridObjectDetect>(settings);
+    } else {
+        throw std::runtime_error("Unhandled detection engine in factory");
     }
 }
