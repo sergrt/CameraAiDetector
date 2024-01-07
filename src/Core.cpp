@@ -15,7 +15,7 @@ Core::Core(Settings settings)
     , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
     , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
 
-    ai_ = AiFactory(settings_);
+    ai_ = AiFactory(settings_.detection_engine, settings_);
     VideoWriter::kVideoCodec = settings_.video_codec;
     VideoWriter::kVideoFileExtension = "." + settings_.video_container;
 

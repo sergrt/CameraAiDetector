@@ -8,11 +8,7 @@ HybridObjectDetect::HybridObjectDetect(const Settings& settings)
     , min_ai_call_interval_(settings.hybrid_detect_settings.min_ai_call_interval)
     , min_ai_nth_frame_check_(settings.hybrid_detect_settings.min_ai_nth_frame_check)
 {
-    if (settings.detection_engine == DetectionEngine::kHybridCodeprojectAi) {
-        ai_ = std::make_unique<CodeprojectAiFacade>(settings.codeproject_ai_url, settings.min_confidence, settings.img_format);
-    } else if (settings.detection_engine == DetectionEngine::kHybridOpenCv) {
-        ai_ = std::make_unique<OpenCvAiFacade>(settings.onnx_file_path, settings.min_confidence);
-    }
+    ai_ = AiFactory(settings.detection_engine == DetectionEngine::kHybridCodeprojectAi ? DetectionEngine::kCodeprojectAi : DetectionEngine::kOpenCv, settings);
 }
 
 bool HybridObjectDetect::Detect(const cv::Mat& image, std::vector<Detection>& detections) {
@@ -29,9 +25,9 @@ bool HybridObjectDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
     if (need_ai_proof_ && (check_frame || std::chrono::steady_clock::now() - prev_ai_call_ >= min_ai_call_interval_)) {
         detect_res = ai_->Detect(image, detections);
         prev_ai_call_ = std::chrono::steady_clock::now();
-        LogDebug() << "Call AI detect for object proof res = " << detect_res << ", detections.size() = " << detections.size();
+        LogDebug() << "AI call for object proof: res = " << detect_res << ", detections.size() = " << detections.size();
         need_ai_proof_ = !(detect_res && !detections.empty());
     }
-    
+
     return detect_res;
 }
