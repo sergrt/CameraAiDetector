@@ -71,7 +71,8 @@ Settings LoadSettings(const std::string& settings_file_name) {
     if (json.contains("hybrid_detect_settings")) {
         const auto hybrid_detect_settings = json["hybrid_detect_settings"];
         settings.hybrid_detect_settings = {
-            std::chrono::milliseconds(hybrid_detect_settings.at("min_ai_call_interval_ms"))
+            std::chrono::milliseconds(hybrid_detect_settings.at("min_ai_call_interval_ms")),
+            hybrid_detect_settings.at("min_ai_nth_frame_check")
         };
     }
 

@@ -33,6 +33,7 @@ struct Settings {
     };
     struct HybridDetectSettings {
         std::chrono::milliseconds min_ai_call_interval = std::chrono::milliseconds(1000);
+        int min_ai_nth_frame_check = 10;
     };
 
     // General settings

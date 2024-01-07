@@ -16,7 +16,8 @@
         "area_trigger": 150
     },
     "hybrid_detect_settings": {
-        "min_ai_call_interval_ms": 1000
+        "min_ai_call_interval_ms": 0,
+        "min_ai_nth_frame_check":  10
     },
     "nth_detect_frame": 5,
     "use_image_scale": true,
