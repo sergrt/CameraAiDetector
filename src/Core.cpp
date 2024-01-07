@@ -1,9 +1,7 @@
 #include "Core.h"
 
-#include "CodeprojectAiFacade.h"
+#include "AiFactory.h"
 #include "Log.h"
-#include "OpenCvAiFacade.h"
-#include "SimpleMotionDetect.h"
 #include "Translation.h"
 #include "UidUtils.h"
 
@@ -17,15 +15,8 @@ Core::Core(Settings settings)
     , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users)
     , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
     , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
-    
-    if (settings_.detection_engine == DetectionEngine::kCodeprojectAi) {
-        ai_ = std::make_unique<CodeprojectAiFacade>(settings_.codeproject_ai_url, settings_.min_confidence, settings_.img_format);
-    } else if (settings_.detection_engine == DetectionEngine::kOpenCv) {
-        ai_ = std::make_unique<OpenCvAiFacade>(settings_.onnx_file_path, settings_.min_confidence);
-    } else if (settings_.detection_engine == DetectionEngine::kSimple) {
-        ai_ = std::make_unique<SimpleMotionDetect>(settings_.motion_detect_settings);
-    }
 
+    ai_ = AiFactory(settings_);
     VideoWriter::kVideoCodec = settings_.video_codec;
     VideoWriter::kVideoFileExtension = "." + settings_.video_container;
 

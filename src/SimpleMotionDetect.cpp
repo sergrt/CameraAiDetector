@@ -16,6 +16,7 @@ SimpleMotionDetect::SimpleMotionDetect(const Settings::MotionDetectSettings& set
 }
 
 bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& detections) {
+    detections.clear();
     // auto _ = instrument_detect_impl_.Trigger();
     cv::Mat gray;
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);

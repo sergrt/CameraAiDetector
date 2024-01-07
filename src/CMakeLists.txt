@@ -50,6 +50,7 @@ set(SOURCE
     Core.cpp
     ErrorReporter.cpp
     FrameReader.cpp
+    HybridObjectDetect.cpp
     Log.cpp
     main.cpp
     OpenCvAiFacade.cpp
@@ -60,12 +61,14 @@ set(SOURCE
 
 set(HEADER
     Ai.h
+    AiFactory.h
     CodeprojectAiFacade.h
     Core.h
     ErrorReporter.h
     FinalAction.h
     FrameReader.h
     Helpers.h
+    HybridObjectDetect.h
     Log.h
     OpenCvAiFacade.h
     RingBuffer.h

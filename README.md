@@ -5,6 +5,7 @@ This application is based on YOLOv5 object detection engine, and performs the fo
 - Capture video stream (from camera - e.g. **rtsp**, or any **video file** or source, supported by OpenCV)
 - Detect objects using **AI** - persons, animals, vehicles, bicycles etc.
 - Detect objects using **simple motion detection** (usable on low-end systems)
+- Detect objects using **hybrid object detection** (something in between cpu/gpu-heavy AI and fast but not so accurate simple motion detection)
 - Send notifications via Telegram
 - Save video based on detection
 - Serve some handy Telegram requests - on-demand images, video download etc.
@@ -52,6 +53,7 @@ List of videos (and previews) can be filtered by time depth. For example, use `/
      - `CodeprojectAI` - CodeProject AI engine
      - `OpenCV` - OpenCV engine
      - `Simple` - simple motion detection engine
+     - `HybridCodeprojectAI` or `HybridOpenCV` - hybrid object detection. It uses simple motion detection, but calls specified AI backend when something appearing in the frame
    - `source` - video stream URL or video file path
    - `storage_path` - exisiting folder to store videos and images
    - `bot_token` - Telegram bot token
@@ -67,6 +69,7 @@ OpenCV DNN, CodeProject AI or Simple motion detection can be used to analyze vid
     - CUDA-enabled OpenCV and CodeProject AI seem to perform really close to each other
     - CPU calculations (on Linux systems) seem to perform better with OpenCV DNN. Benchmarking on low end mini-pc with Linux Ubuntu 22.04 shows that OpenCV DNN processes frame almost 20% faster
     - Simple motion detection is the fastest and is recommended for low-end systems
+    - Hybrid object detection is quite easy on resources and provides more precise results than simple motion detection
 - Compiling OpenCV with CUDA support is _really_ slow
 
 ## Configuration

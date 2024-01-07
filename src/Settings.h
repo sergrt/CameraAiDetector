@@ -15,7 +15,9 @@ enum class BufferOverflowStrategy {
 enum class DetectionEngine {
     kCodeprojectAi,
     kOpenCv,
-    kSimple
+    kSimple,
+    kHybridCodeprojectAi,
+    kHybridOpenCv
 };
 
 struct Settings {

@@ -15,7 +15,9 @@ const std::map<std::string, BufferOverflowStrategy> kStrToBufferStrategy = {
 const std::map<std::string, DetectionEngine> kStrToDetectionEngine = {
     {"CODEPROJECTAI", DetectionEngine::kCodeprojectAi},
     {"OPENCV", DetectionEngine::kOpenCv},
-    {"SIMPLE", DetectionEngine::kSimple}
+    {"SIMPLE", DetectionEngine::kSimple},
+    {"HYBRIDCODEPROJECTAI", DetectionEngine::kHybridCodeprojectAi},
+    {"HYBRIDOPENCV", DetectionEngine::kHybridOpenCv},
 };
 
 namespace {
