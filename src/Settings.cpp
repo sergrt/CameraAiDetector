@@ -52,6 +52,7 @@ Settings LoadSettings(const std::string& settings_file_name) {
     settings.errors_before_reconnect = json.value("errors_before_reconnect", settings.errors_before_reconnect);
     settings.delay_after_error_ms = json.value("delay_after_error_ms", settings.delay_after_error_ms);
     settings.cooldown_write_time_ms = json.value("cooldown_write_time_ms", settings.cooldown_write_time_ms);
+    settings.max_buffer_size = json.value("max_buffer_size", settings.max_buffer_size);
     settings.buffer_overflow_strategy = StringToBufferStrategy(json.value("buffer_overflow_strategy", "Delay"));
 
     settings.detection_engine = StringToDetectionEngine(json.value("detection_engine", "CodeprojectAI"));

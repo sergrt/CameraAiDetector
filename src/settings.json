@@ -4,6 +4,7 @@
     "errors_before_reconnect": 5,
     "delay_after_error_ms": 2000,
     "cooldown_write_time_ms": 5000,
+    "max_buffer_size": 1000,
     "buffer_overflow_strategy": "delay",
 
     "detection_engine": "CodeprojectAI",
@@ -17,7 +18,7 @@
     },
     "hybrid_detect_settings": {
         "min_ai_call_interval_ms": 0,
-        "min_ai_nth_frame_check":  10
+        "min_ai_nth_frame_check": 10
     },
     "nth_detect_frame": 5,
     "use_image_scale": true,

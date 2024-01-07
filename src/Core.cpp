@@ -5,7 +5,6 @@
 #include "Translation.h"
 #include "UidUtils.h"
 
-constexpr size_t kMaxBufferSize = 500u;  // Approx 20 sec of 25 fps stream
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);
 
@@ -230,12 +229,12 @@ void Core::CaptureThreadFunc() {
                 debug_buffer_out_time = now;
             }
 
-            if (buffer_size > kMaxBufferSize) {
+            if (buffer_size > settings_.max_buffer_size) {
                 if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDelay) {
-                    LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), delay capture";
+                    LogWarning() << "Buffer size exceeds max (" << settings_.max_buffer_size << "), delay capture";
                     std::this_thread::sleep_for(kBufferOverflowDelay);
                 } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDropHalf) {
-                    LogWarning() << "Buffer size exceeds max (" << kMaxBufferSize << "), dropping half of cache";
+                    LogWarning() << "Buffer size exceeds max (" << settings_.max_buffer_size << "), dropping half of cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));

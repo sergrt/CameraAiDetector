@@ -43,6 +43,7 @@ struct Settings {
     size_t delay_after_error_ms = 2'000;  // Delay after frame obtain error
     size_t cooldown_write_time_ms = 5'000;  // Time to write after object became not detected - align this with telegram alarm notification
 
+    size_t max_buffer_size = 500u;  // Approx 20 secs @ 25fps
     BufferOverflowStrategy buffer_overflow_strategy = BufferOverflowStrategy::kDelay;
 
     DetectionEngine detection_engine = DetectionEngine::kCodeprojectAi;
