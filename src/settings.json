@@ -48,7 +48,7 @@
     "send_video_previews": true,
     "send_video": false,
 
-    "log_level": "info",
+    "log_level": "Info",
     "log_filename": "",
     "notify_on_start": true
 }
