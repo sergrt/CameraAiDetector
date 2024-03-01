@@ -12,6 +12,7 @@
 #include <chrono>
 #include <filesystem>
 #include <regex>
+#include <set>
 
 constexpr size_t kMaxMessageLen = 4096;
 const auto kStartCmd = std::string("start");
@@ -145,15 +146,18 @@ std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
 struct VideoFileInfo {
     std::string uid;
     size_t size_mb;
+    bool operator<(const VideoFileInfo& other) const {
+        return uid < other.uid;
+    }
 };
 
-std::vector<VideoFileInfo> CollectVideoFileUids(const std::filesystem::path& storage_path, const std::optional<Filter>& filter) {
-    std::vector<VideoFileInfo> files;
+std::set<VideoFileInfo> CollectVideoFileUids(const std::filesystem::path& storage_path, const std::optional<Filter>& filter) {
+    std::set<VideoFileInfo> files;
     for (const auto& entry : std::filesystem::directory_iterator(storage_path)) {
         if (VideoWriter::IsVideoFile(entry.path())) {
             const auto file_name = entry.path().filename().generic_string();
             if (!filter || ApplyFilter(*filter, file_name)) {
-                files.emplace_back(GetUidFromFileName(file_name), GetFileSizeMb(entry));
+                files.insert({GetUidFromFileName(file_name), GetFileSizeMb(entry)});
             }
         }
     }
