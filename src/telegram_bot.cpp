@@ -218,7 +218,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 ProcessVideoCmd(id, uid);
             }
         } else {
-            LogWarning() << "Unauthorized user tried to access: " << id;
+            LOG_WARNING << "Unauthorized user tried to access: " << id;
         }
     });
     bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
@@ -297,7 +297,7 @@ void TelegramBot::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filte
 
 void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid) {
     if (!IsUidValid(video_uid)) {
-        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
+        LOG_WARNING << "User " << user_id << " asked file with invalid uid: " << video_uid;
         PostMessage(translation::messages::kInvalidFileRequested, user_id);
         return;
     }
@@ -333,7 +333,7 @@ void TelegramBot::ProcessLogCmd(uint64_t user_id) {
 bool TelegramBot::IsUserAllowed(uint64_t user_id) const {
     const auto it = std::find(cbegin(allowed_users_), cend(allowed_users_), user_id);
     if (it == cend(allowed_users_)) {
-        LogWarning() << "Unauthorized user access: " << user_id;
+        LOG_WARNING << "Unauthorized user access: " << user_id;
         return false;
     }
     return true;
@@ -352,9 +352,9 @@ void TelegramBot::SendOnDemandPhoto(const std::filesystem::path& file_path, cons
         for (const auto& user : recipients) {
             try {
                 if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                    LogError() << "On-demand photo send failed to user " << user;
+                    LOG_ERROR << "On-demand photo send failed to user " << user;
             } catch (std::exception& e) {
-                LogException("Exception while sending photo", __FILE__, __LINE__, e.what());
+                LOG_EXCEPTION("Exception while sending photo", e);
             }
         }
     }
@@ -370,9 +370,9 @@ void TelegramBot::SendAlarmPhoto(const std::filesystem::path& file_path, const s
         for (const auto& user : allowed_users_) {
             try {
                 if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                    LogError() << "Alarm photo send failed to user " << user;
+                    LOG_ERROR << "Alarm photo send failed to user " << user;
             } catch (std::exception& e) {
-                LogException("Exception while sending photo", __FILE__, __LINE__, e.what());
+                LOG_EXCEPTION("Exception while sending photo", e);
             }
         }
     }
@@ -382,9 +382,9 @@ void TelegramBot::SendMessage(const std::string& message, const std::set<uint64_
     for (const auto& user : recipients) {
         try {
             if (!bot_->getApi().sendMessage(user, message, false, 0, nullptr, "HTML"))
-                LogError() << "Message send failed to user " << user;
+                LOG_ERROR << "Message send failed to user " << user;
         } catch (std::exception& e) {
-            LogException("Exception while sending message", __FILE__, __LINE__, e.what());
+            LOG_EXCEPTION("Exception while sending message", e);
         }
     }
 }
@@ -407,9 +407,9 @@ void TelegramBot::SendVideoPreview(const std::filesystem::path& file_path, const
         for (const auto& user_id : recipients) {
             try {
                 if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
-                    LogError() << "Video preview send failed to user " << user_id;
+                    LOG_ERROR << "Video preview send failed to user " << user_id;
             } catch (std::exception& e) {
-                LogException("Exception while sending photo", __FILE__, __LINE__, e.what());
+                LOG_EXCEPTION("Exception while sending photo", e);
             }
         }
     }
@@ -423,9 +423,9 @@ void TelegramBot::SendVideo(const std::filesystem::path& file_path, const std::s
         for (const auto& user_id : recipients) {
             try {
                 if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
-                    LogError() << "Video file " << file_path << " send failed to user " << user_id;
+                    LOG_ERROR << "Video file " << file_path << " send failed to user " << user_id;
             } catch (std::exception& e) {
-                LogException("Exception while sending video", __FILE__, __LINE__, e.what());
+                LOG_EXCEPTION("Exception while sending video", e);
             }
         }
     }
@@ -434,19 +434,19 @@ void TelegramBot::SendVideo(const std::filesystem::path& file_path, const std::s
 void TelegramBot::SendMenu(uint64_t recipient) {
     try {
         if (!bot_->getApi().sendMessage(recipient, translation::menu::kCaption, false, 0, MakeStartMenu(), "HTML"))
-            LogError() << "/start reply send failed to user " << recipient;
+            LOG_ERROR << "/start reply send failed to user " << recipient;
     } catch (std::exception& e) {
-        LogException("Exception while sending menu", __FILE__, __LINE__, e.what());
+        LOG_EXCEPTION("Exception while sending menu", e);
     }
 }
 
 void TelegramBot::SendAnswer(const std::string& callback_id) {
     try {
         if (!bot_->getApi().answerCallbackQuery(callback_id))
-            LogError() << "Answer callback query send failed";
+            LOG_ERROR << "Answer callback query send failed";
     } catch (std::exception& e) {
         // Timed-out queries trigger this exception, so this exception might be non-fatal, but still logged
-        LogException("Exception (non-fatal?) while sending answer callback query", __FILE__, __LINE__, e.what());
+        LOG_EXCEPTION("Exception (non-fatal?) while sending answer callback query", e);
     }
 }
 
@@ -523,9 +523,9 @@ std::string TelegramBot::VideoCmdPrefix() {
 void TelegramBot::PollThreadFunc() {
     try {
         if (!bot_->getApi().deleteWebhook())
-            LogError() << "Unable to delete bot Webhook";
+            LOG_ERROR << "Unable to delete bot Webhook";
     } catch (std::exception& e) {
-        LogException("Exception while prepare bot polling", __FILE__, __LINE__, e.what());
+        LOG_EXCEPTION("Exception while prepare bot polling", e);
     }
 
     TgBot::TgLongPoll long_poll(*bot_);
@@ -535,7 +535,7 @@ void TelegramBot::PollThreadFunc() {
             LogTrace() << "LongPoll start";
             long_poll.start();
         } catch (std::exception& e) {
-            LogException("Exception while start polling", __FILE__, __LINE__, e.what());
+            LOG_EXCEPTION("Exception while start polling", e);
         }
     }
 }

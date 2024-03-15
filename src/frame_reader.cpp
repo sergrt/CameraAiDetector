@@ -10,21 +10,21 @@ FrameReader::FrameReader(std::string source)
 bool FrameReader::Open() {
     capture_->release();
     const auto res = capture_->open(source_, cv::CAP_ANY);
-    (res ? LogInfo() : LogError()) << "FrameReader::open() result: " << res << " for source \"" + source_ + "\"";
+    (res ? LOG_INFO : LOG_ERROR) << "FrameReader::open() result: " << res << " for source \"" + source_ + "\"";
     return res;
 }
 
 bool FrameReader::Reconnect() {
     capture_->release();
     const auto res = capture_->open(source_, cv::CAP_ANY);
-    (res ? LogInfo() : LogError()) << "FrameReader::reconnect() result: " << res << " for source \"" + source_ + "\"";
+    (res ? LOG_INFO : LOG_ERROR) << "FrameReader::reconnect() result: " << res << " for source \"" + source_ + "\"";
     return res;
 }
 
 bool FrameReader::GetFrame(cv::Mat& frame) {
     // TODO: check capture_->isOpened() ? Consider performance - this function is called from tight loop
     const auto res = capture_->read(frame);
-    (res ? LogTrace() : LogError()) << "FrameReader::getFrame() result: " << res;
+    (res ? LOG_TRACE : LOG_ERROR) << "FrameReader::getFrame() result: " << res;
     return res;
 }
 

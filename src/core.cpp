@@ -35,7 +35,7 @@ void Core::PostOnDemandPhoto(const cv::Mat& frame) {
     const auto file_name = GenerateFileName("on_demand_") + ".jpg";
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
-        LogError() << "Error write on-demand photo, path = " << path;
+        LOG_ERROR << "Error write on-demand photo, path = " << path;
     bot_.PostOnDemandPhoto(path);
 }
 
@@ -64,7 +64,7 @@ void Core::PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& de
     const auto file_name = GenerateFileName("alarm_") + ".jpg";
     const auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), frame))
-        LogError() << "Error write alarm photo, path = " << path;
+        LOG_ERROR << "Error write alarm photo, path = " << path;
     bot_.PostAlarmPhoto(path, classes_detected);
 } 
 
@@ -80,7 +80,7 @@ std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) 
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
     auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), video_writer_->GetPreviewImage(), img_encode_param))
-        LogError() << "Error write video preview image, path = " << path;
+        LOG_ERROR << "Error write video preview image, path = " << path;
     return path;
 }
 
@@ -200,7 +200,7 @@ void Core::CaptureThreadFunc() {
         cv::Mat frame;
         if (!frame_reader_.GetFrame(frame)) {
             ++get_frame_error_count_;
-            LogError() << "Can't get frame";
+            LOG_ERROR << "Can't get frame";
             frame_reader_error_.Update(ErrorReporter::ErrorState::kError);
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {

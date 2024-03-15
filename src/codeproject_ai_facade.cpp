@@ -15,7 +15,7 @@ size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* userp) {
 
 std::vector<Detection> ParseResponse(const nlohmann::json& response) {
     if (!response.value("success", false) || !response.contains("predictions")) {
-        LogError() << "CodeProject AI backend error. Response: " << response.dump();
+        LOG_ERROR << "CodeProject AI backend error. Response: " << response.dump();
         return {};
     }
 
@@ -67,7 +67,7 @@ std::vector<unsigned char> CodeprojectAiFacade::PrepareImage(const cv::Mat& imag
     static const std::vector<int> img_encode_param;
 
     if (!cv::imencode(img_format_, image, img_buffer, img_encode_param)) {
-        LogError() << "Frame encoding failed";
+        LOG_ERROR << "Frame encoding failed";
         return {};
     }
 
