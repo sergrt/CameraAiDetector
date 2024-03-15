@@ -46,40 +46,40 @@ ELSE()
 ENDIF()
 
 set(SOURCE
-    CodeprojectAiFacade.cpp
-    Core.cpp
-    ErrorReporter.cpp
-    FrameReader.cpp
-    HybridObjectDetect.cpp
-    Log.cpp
+    codeproject_ai_facade.cpp
+    core.cpp
+    error_reporter.cpp
+    frame_reader.cpp
+    hybrid_object_detect.cpp
+    log.cpp
     main.cpp
-    OpenCvAiFacade.cpp
-    Settings.cpp
-    SimpleMotionDetect.cpp
-    TelegramBot.cpp
-    VideoWriter.cpp)
+    opencv_ai_facade.cpp
+    settings.cpp
+    simple_motion_detect.cpp
+    telegram_bot.cpp
+    video_writer.cpp)
 
 set(HEADER
-    Ai.h
-    AiFactory.h
-    CodeprojectAiFacade.h
-    Core.h
-    ErrorReporter.h
-    FinalAction.h
-    FrameReader.h
-    Helpers.h
-    HybridObjectDetect.h
-    Log.h
-    OpenCvAiFacade.h
-    RingBuffer.h
-    SafePtr.h
-    Settings.h
-    SimpleMotionDetect.h
-    StreamProperties.h
-    TelegramBot.h
-    Translation.h
-    UidUtils.h
-    VideoWriter.h)
+    ai.h
+    ai_factory.h
+    codeproject_ai_facade.h
+    core.h
+    error_reporter.h
+    final_action.h
+    frame_reader.h
+    helpers.h
+    hybrid_object_detect.h
+    log.h
+    opencv_ai_facade.h
+    ring_buffer.h
+    safe_ptr.h
+    settings.h
+    simple_motion_detect.h
+    stream_properties.h
+    telegram_bot.h
+    translation.h
+    uid_utils.h
+    video_writer.h)
 
 set(OTHER_FILES
     settings.json)

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Ai.h"
-#include "Log.h"
-#include "Settings.h"
+#include "ai.h"
+#include "log.h"
+#include "settings.h"
 
 #include <opencv2/opencv.hpp>
 

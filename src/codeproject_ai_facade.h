@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Ai.h"
+#include "ai.h"
 
 #include <curl/curl.h>
 

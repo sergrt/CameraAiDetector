@@ -1,12 +1,12 @@
-#include "TelegramBot.h"
+#include "telegram_bot.h"
 
-#include "Helpers.h"
-#include "Log.h"
-#include "RingBuffer.h"
-#include "SafePtr.h"
-#include "Translation.h"
-#include "UidUtils.h"
-#include "VideoWriter.h"
+#include "helpers.h"
+#include "log.h"
+#include "ring_buffer.h"
+#include "safe_ptr.h"
+#include "translation.h"
+#include "uid_utils.h"
+#include "video_writer.h"
 
 #include <algorithm>
 #include <chrono>

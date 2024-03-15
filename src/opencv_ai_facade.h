@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Ai.h"
-#include "Log.h"
+#include "ai.h"
+#include "log.h"
 
 #include <filesystem>
 #include <vector>

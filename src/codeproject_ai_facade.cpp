@@ -1,6 +1,6 @@
-#include "CodeprojectAiFacade.h"
+#include "codeproject_ai_facade.h"
 
-#include "Log.h"
+#include "log.h"
 
 #include <nlohmann/json.hpp>
 

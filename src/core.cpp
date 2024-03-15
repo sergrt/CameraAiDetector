@@ -1,9 +1,9 @@
-#include "Core.h"
+#include "core.h"
 
-#include "AiFactory.h"
-#include "Log.h"
-#include "Translation.h"
-#include "UidUtils.h"
+#include "ai_factory.h"
+#include "log.h"
+#include "translation.h"
+#include "uid_utils.h"
 
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);

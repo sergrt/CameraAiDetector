@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Log.h"
+#include "log.h"
 
 #include <chrono>
 #include <filesystem>

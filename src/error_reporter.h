@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TelegramBot.h"
+#include "telegram_bot.h"
 
 #include <string>
 

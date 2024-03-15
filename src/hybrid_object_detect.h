@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Ai.h"
-#include "Log.h"
-#include "Settings.h"
-#include "SimpleMotionDetect.h"
+#include "ai.h"
+#include "log.h"
+#include "settings.h"
+#include "simple_motion_detect.h"
 
 #include <chrono>
 

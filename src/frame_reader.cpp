@@ -1,6 +1,6 @@
-#include "FrameReader.h"
+#include "frame_reader.h"
 
-#include "Log.h"
+#include "log.h"
 
 FrameReader::FrameReader(std::string source)
     : source_(std::move(source))

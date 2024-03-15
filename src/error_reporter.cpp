@@ -1,4 +1,4 @@
-#include "ErrorReporter.h"
+#include "error_reporter.h"
 
 ErrorReporter::ErrorReporter(TelegramBot* telegram_bot, std::string activation_msg, std::string deactivation_msg)
     : bot_(telegram_bot)

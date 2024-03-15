@@ -1,9 +1,9 @@
-#include "Core.h"
-#include "FinalAction.h"
-#include "Log.h"
-#include "RingBuffer.h"
-#include "SafePtr.h"
-#include "Settings.h"
+#include "core.h"
+#include "final_action.h"
+#include "log.h"
+#include "ring_buffer.h"
+#include "safe_ptr.h"
+#include "settings.h"
 
 #include <boost/program_options.hpp>
 

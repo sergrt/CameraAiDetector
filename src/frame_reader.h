@@ -1,6 +1,6 @@
 #pragma once
 
-#include "StreamProperties.h"
+#include "stream_properties.h"
 
 #include <opencv2/opencv.hpp>
 

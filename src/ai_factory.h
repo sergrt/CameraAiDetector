@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CodeprojectAiFacade.h"
-#include "HybridObjectDetect.h"
-#include "OpenCvAiFacade.h"
-#include "Settings.h"
-#include "SimpleMotionDetect.h"
+#include "codeproject_ai_facade.h"
+#include "hybrid_object_detect.h"
+#include "opencv_ai_facade.h"
+#include "settings.h"
+#include "simple_motion_detect.h"
 
 #include <memory>
 #include <stdexcept>

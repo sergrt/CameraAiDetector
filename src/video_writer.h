@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Settings.h"
-#include "StreamProperties.h"
+#include "settings.h"
+#include "stream_properties.h"
 
 #include <opencv2/opencv.hpp>
 

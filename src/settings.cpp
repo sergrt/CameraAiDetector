@@ -1,6 +1,6 @@
-#include "Settings.h"
+#include "settings.h"
 
-#include "Helpers.h"
+#include "helpers.h"
 
 #include <nlohmann/json.hpp>
 

@@ -1,7 +1,7 @@
-#include "HybridObjectDetect.h"
+#include "hybrid_object_detect.h"
 
-#include "AiFactory.h"
-#include "Log.h"
+#include "ai_factory.h"
+#include "log.h"
 
 HybridObjectDetect::HybridObjectDetect(const Settings& settings)
     : simple_motion_detect_(settings.motion_detect_settings)

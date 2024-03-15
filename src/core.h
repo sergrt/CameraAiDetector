@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Ai.h"
-#include "ErrorReporter.h"
-#include "FrameReader.h"
-#include "Settings.h"
-#include "TelegramBot.h"
-#include "VideoWriter.h"
+#include "ai.h"
+#include "error_reporter.h"
+#include "frame_reader.h"
+#include "settings.h"
+#include "telegram_bot.h"
+#include "video_writer.h"
 
 #include <atomic>
 #include <chrono>

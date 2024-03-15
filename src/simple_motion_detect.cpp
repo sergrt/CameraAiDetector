@@ -1,6 +1,6 @@
-#include "SimpleMotionDetect.h"
+#include "simple_motion_detect.h"
 
-#include "Log.h"
+#include "log.h"
 
 #include <limits>
 #include <vector>

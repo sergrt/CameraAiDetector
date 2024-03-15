@@ -1,7 +1,7 @@
-#include "VideoWriter.h"
+#include "video_writer.h"
 
-#include "Log.h"
-#include "UidUtils.h"
+#include "log.h"
+#include "uid_utils.h"
 
 #include <stdexcept>
 

@@ -1,6 +1,6 @@
-#include "OpenCvAiFacade.h"
+#include "opencv_ai_facade.h"
 
-#include "Log.h"
+#include "log.h"
 
 #include <opencv2/opencv.hpp>
 

@@ -1,8 +1,8 @@
-#include "Log.h"
+#include "log.h"
 
-#include "Helpers.h"
-#include "RingBuffer.h"
-#include "SafePtr.h"
+#include "helpers.h"
+#include "ring_buffer.h"
+#include "safe_ptr.h"
 
 #include <chrono>
 #include <map>

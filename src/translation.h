@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 //#define LANG_RU
 
 namespace translation{
