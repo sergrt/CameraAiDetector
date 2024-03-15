@@ -20,6 +20,8 @@ ENDIF()
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
+# Suppress deprecation warnings - originated from TgBot library
+add_definitions("-DBOOST_BIND_GLOBAL_PLACEHOLDERS")
 
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
