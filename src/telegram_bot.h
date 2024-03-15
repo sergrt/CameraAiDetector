@@ -87,7 +87,7 @@ private:
     std::set<uint64_t> allowed_users_;
 
     std::jthread poll_thread_;
-    std::atomic_bool stop_ = true;
+    std::atomic_bool stop_{true};
 
     std::set<uint64_t> users_waiting_for_photo_;
     mutable std::mutex photo_mutex_;

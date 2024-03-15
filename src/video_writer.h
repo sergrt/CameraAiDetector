@@ -28,12 +28,12 @@ public:
 private:
     cv::VideoWriter writer_;
     std::string uid_;
-    const bool use_scale_ = false;
-    const double scale_height_ = 1.0;
-    const double scale_width_ = 1.0;
-    const int scale_algorithm_ = cv::INTER_AREA;
-    const std::chrono::milliseconds preview_sampling_interval_ = std::chrono::milliseconds(2000);
+    const bool use_scale_{false};
+    const double scale_height_{1.0};
+    const double scale_width_{1.0};
+    const int scale_algorithm_{cv::INTER_AREA};
+    const std::chrono::milliseconds preview_sampling_interval_{std::chrono::milliseconds(2000)};
 
-    std::chrono::time_point<std::chrono::steady_clock> last_frame_time_;
+    std::chrono::time_point<std::chrono::steady_clock> last_frame_time_{};
     std::vector<cv::Mat> preview_frames_;
 };

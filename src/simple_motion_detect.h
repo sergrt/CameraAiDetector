@@ -20,10 +20,10 @@ public:
     bool Detect(const cv::Mat& image, std::vector<Detection>& detections) override;
 
 private:
-    cv::Size gaussian_sz_ = cv::Size(20, 20);
-    int threshold_ = 15;
-    int area_trigger_ = 150;
+    cv::Size gaussian_sz_{20, 20};
+    int threshold_{15};
+    int area_trigger_{150};
     InstrumentCall instrument_detect_impl_;
     cv::Mat prev_frame_;
-    bool triggered_ = false;
+    bool triggered_{false};
 };

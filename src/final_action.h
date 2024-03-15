@@ -22,6 +22,6 @@ public:
     }
 
 private:
-    F f_;
-    bool invoke_;
+    F f_{};
+    bool invoke_{true};
 };

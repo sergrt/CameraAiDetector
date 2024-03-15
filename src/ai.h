@@ -7,7 +7,7 @@
 
 struct Detection {
     std::string class_name;
-    float confidence = 0.0f;
+    float confidence{0.0f};
     cv::Rect box;
 };
 

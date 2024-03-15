@@ -19,5 +19,5 @@ private:
     TelegramBot* const bot_;
     std::string activation_msg_;
     std::string deactivation_msg_;
-    ErrorState cur_state_ = ErrorState::kNoError;
+    ErrorState cur_state_{ErrorState::kNoError};
 };

@@ -65,7 +65,7 @@ private:
     std::mutex buffer_mutex_;
     std::condition_variable buffer_cv_;
 
-    size_t get_frame_error_count_ = 0;
+    size_t get_frame_error_count_{0};
 
     ErrorReporter ai_error_;
     ErrorReporter frame_reader_error_;

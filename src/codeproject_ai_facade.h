@@ -8,6 +8,8 @@
 #include <vector>
 
 class CodeprojectAiFacade final : public Ai {
+    using curl_ptr = std::unique_ptr<CURL, void(*)(CURL*)>;
+
 public:
     CodeprojectAiFacade(std::string url, float min_confidence, const std::string& img_format);
     ~CodeprojectAiFacade();
@@ -26,5 +28,5 @@ private:
     const std::string min_confidence_;
     const std::string img_format_;
     const std::string img_mime_type_;
-    CURL* curl_;
+    curl_ptr curl_;
 };

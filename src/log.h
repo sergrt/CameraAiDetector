@@ -115,6 +115,13 @@ inline Log LogError() {
     return Log(kError);
 }
 
+inline void LogException(const std::string& description, const std::string& file, int line, const std::string& what) {
+    LogError() << description << ": " << file << ":" << line << ": " << what;
+}
+
+#define LOG_ERROR LogError() << __FILE__ << ":" << __LINE__ << ": "
+#define LOG_EXCEPTION(exception) LogError() << "Exception at " << __FILE__ << ":" << __LINE__ << ": " << exception.what()
+
 struct InstrumentCall {
     InstrumentCall(std::string name, uint64_t log_counter);
     InstrumentCall(std::string name, std::chrono::milliseconds log_interval);

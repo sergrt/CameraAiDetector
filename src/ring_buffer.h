@@ -36,6 +36,6 @@ public:
 
 private:
     std::vector<T> data_;
-    bool ring_filled_ = false;
-    size_t end_ = 0;
+    bool ring_filled_{false};
+    size_t end_{0};
 };

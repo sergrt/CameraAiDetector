@@ -114,10 +114,6 @@ size_t GetFileSizeMb(const std::filesystem::path& file_name) {
     return std::filesystem::file_size(file_name) / 1'000'000;
 }
 
-void LogException(const std::string& description, const std::string& file, int line, const std::string& what) {
-    LogError() << description << ": " << file << ":" << line << ": " << what;
-}
-
 std::string GetUptime() {
     const auto diff_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - kStartTime).count();
     auto formatted = std::format("{:01}d {:02}:{:02}:{:02}"
