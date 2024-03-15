@@ -74,42 +74,36 @@ std::vector<unsigned char> CodeprojectAiFacade::PrepareImage(const cv::Mat& imag
     return img_buffer;
 }
 
-bool CodeprojectAiFacade::Detect(const cv::Mat& image, std::vector<Detection>& detections) {  // const unsigned char* data, size_t data_size) {
-
+bool CodeprojectAiFacade::Detect(const cv::Mat& image, std::vector<Detection>& detections) {
     const std::vector<unsigned char> data = PrepareImage(image);
+
+    auto mime = curl_mime_init(curl_.get());
+    const auto _ = FinalAction([&mime] { curl_mime_free(mime); });
+
+    auto image_part = curl_mime_addpart(mime);
+    curl_mime_name(image_part, "image");
+    curl_mime_filename(image_part, "image");
+    curl_mime_data(image_part, reinterpret_cast<const char*>(data.data()), data.size());
+    curl_mime_type(image_part, img_mime_type_.c_str());
+
+    auto confidence_part = curl_mime_addpart(mime);
+    curl_mime_name(confidence_part, "min_confidence");
+    curl_mime_data(confidence_part, min_confidence_.c_str(), min_confidence_.size());
+    curl_mime_type(confidence_part, "text/html");
+
     curl_easy_setopt(curl_.get(), CURLOPT_URL, url_.c_str());
-
-    curl_httppost* form = nullptr;
-    curl_httppost* last = nullptr;
-
-    curl_formadd(&form, &last,
-        CURLFORM_COPYNAME, "image",
-        CURLFORM_BUFFER, "image",
-        CURLFORM_BUFFERPTR, data.data(),
-        CURLFORM_BUFFERLENGTH, data.size(),
-        CURLFORM_CONTENTTYPE, img_mime_type_.c_str(),  // "image/jpeg", "image/bmp" etc.
-        CURLFORM_END);
-
-    curl_formadd(&form, &last,
-        CURLFORM_COPYNAME, "min_confidence",
-        CURLFORM_COPYCONTENTS, min_confidence_.c_str(),
-        CURLFORM_CONTENTTYPE, "text/html",
-        CURLFORM_END);
-
-    curl_easy_setopt(curl_.get(), CURLOPT_HTTPPOST, form);
+    curl_easy_setopt(curl_.get(), CURLOPT_MIMEPOST, mime);
 
     std::string read_buffer;
     curl_easy_setopt(curl_.get(), CURLOPT_WRITEDATA, &read_buffer);
     curl_easy_setopt(curl_.get(), CURLOPT_WRITEFUNCTION, WriteCallback);
 
-    const CURLcode res = curl_easy_perform(curl_.get());
-    curl_formfree(form);
-
-    if (res == CURLE_OK) {
+    const auto curl_res = curl_easy_perform(curl_.get());
+    if (curl_res == CURLE_OK) {
         LogTrace() << "detect() ok, result: " << read_buffer;
         detections = ParseResponse(nlohmann::json::parse(read_buffer));
     } else {
-        LogError() << "curl_easy_perform() failed: " << curl_easy_strerror(res);
+        LOG_ERROR << "curl_easy_perform() failed: " << curl_easy_strerror(curl_res);
         return false;
     }
 
