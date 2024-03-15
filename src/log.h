@@ -115,13 +115,15 @@ inline Log LogError() {
     return Log(kError);
 }
 
-#define LOG_TRACE LogTrace() << __FILE__ << ":" << __LINE__ << ": "
-#define LOG_DEBUG LogDebug() << __FILE__ << ":" << __LINE__ << ": "
-#define LOG_INFO LogInfo() << __FILE__ << ":" << __LINE__ << ": "
-#define LOG_WARNING LogWarning() << __FILE__ << ":" << __LINE__ << ": "
-#define LOG_ERROR LogError() << __FILE__ << ":" << __LINE__ << ": "
+#define LOG_FILE_LINE __FILE__ << ":" << __LINE__ << ": "
 
-#define LOG_EXCEPTION(description, exception) LogError() << "Exception at " << __FILE__ << ":" << __LINE__ << ": " << description << ": " << exception.what()
+#define LOG_TRACE LogTrace() << LOG_FILE_LINE
+#define LOG_DEBUG LogDebug() << LOG_FILE_LINE
+#define LOG_INFO LogInfo() << LOG_FILE_LINE
+#define LOG_WARNING LogWarning() << LOG_FILE_LINE
+#define LOG_ERROR LogError() << LOG_FILE_LINE
+
+#define LOG_EXCEPTION(description, exception) LogError() << "Exception at " << LOG_FILE_LINE << description << ": " << exception.what()
 
 struct InstrumentCall {
     InstrumentCall(std::string name, uint64_t log_counter);

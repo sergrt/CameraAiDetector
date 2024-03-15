@@ -218,7 +218,7 @@ TelegramBot::TelegramBot(const std::string& token, std::filesystem::path storage
                 ProcessVideoCmd(id, uid);
             }
         } else {
-            LOG_WARNING << "Unauthorized user tried to access: " << id;
+            LogWarning() << "Unauthorized user tried to access: " << id;
         }
     });
     bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
@@ -297,7 +297,7 @@ void TelegramBot::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filte
 
 void TelegramBot::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid) {
     if (!IsUidValid(video_uid)) {
-        LOG_WARNING << "User " << user_id << " asked file with invalid uid: " << video_uid;
+        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
         PostMessage(translation::messages::kInvalidFileRequested, user_id);
         return;
     }
@@ -333,7 +333,7 @@ void TelegramBot::ProcessLogCmd(uint64_t user_id) {
 bool TelegramBot::IsUserAllowed(uint64_t user_id) const {
     const auto it = std::find(cbegin(allowed_users_), cend(allowed_users_), user_id);
     if (it == cend(allowed_users_)) {
-        LOG_WARNING << "Unauthorized user access: " << user_id;
+        LogWarning() << "Unauthorized user access: " << user_id;
         return false;
     }
     return true;
