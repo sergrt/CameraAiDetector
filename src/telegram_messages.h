@@ -9,13 +9,13 @@ namespace telegram {
 
 namespace commands {
 
-inline constexpr auto kStart = std::string("start");
-inline constexpr auto kPreviews = std::string("previews");
-inline constexpr auto kVideos = std::string("videos");
-inline constexpr auto kVideo = std::string("video");
-inline constexpr auto kImage = std::string("image");
-inline constexpr auto kPing = std::string("ping");
-inline constexpr auto kLog = std::string("log");
+inline const auto kStart = std::string("start");
+inline const auto kPreviews = std::string("previews");
+inline const auto kVideos = std::string("videos");
+inline const auto kVideo = std::string("video");
+inline const auto kImage = std::string("image");
+inline const auto kPing = std::string("ping");
+inline const auto kLog = std::string("log");
 
 inline std::string VideoCmdPrefix() {
     auto video_prefix = "/" + kVideo + "_";
