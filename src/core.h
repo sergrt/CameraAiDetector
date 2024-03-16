@@ -47,7 +47,7 @@ private:
 
     const Settings settings_;
     FrameReader frame_reader_;
-    TelegramBot bot_;
+    telegram::BotFacade bot_;
     std::unique_ptr<Ai> ai_;
     std::unique_ptr<VideoWriter> video_writer_;
 

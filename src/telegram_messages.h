@@ -5,13 +5,33 @@
 #include <string>
 #include <variant>
 
-namespace telegram_messages {
+namespace telegram {
+
+namespace commands {
+
+// TODO: move to cpp file
+const auto kStart = std::string("start");
+const auto kPreviews = std::string("previews");
+const auto kVideos = std::string("videos");
+const auto kVideo = std::string("video");
+const auto kImage = std::string("image");
+const auto kPing = std::string("ping");
+const auto kLog = std::string("log");
+
+inline std::string VideoCmdPrefix() {
+    auto video_prefix = "/" + kVideo + "_";
+    return video_prefix;
+}
+
+}  // namespace commands
+
+namespace messages {
 
 struct MultipleRecipients {
     std::set<uint64_t> recipients;
 };
 
-struct Message : public MultipleRecipients {
+struct TextMessage : public MultipleRecipients {
     std::string text;
 };
 
@@ -19,7 +39,7 @@ struct OnDemandPhoto : public MultipleRecipients {
     std::filesystem::path file_path;
 };
 
-struct AlarmPhoto {
+struct AlarmPhoto : public MultipleRecipients {
     std::filesystem::path file_path;
     std::string detections;
 };
@@ -40,17 +60,18 @@ struct Answer {
     std::string callback_id;
 };
 
-} // telegram_messages
+}  // namespace messages
 
-using TelegramMessage = std::variant<
-    telegram_messages::Message,
-    telegram_messages::OnDemandPhoto,
-    telegram_messages::AlarmPhoto,
-    telegram_messages::Preview,
-    telegram_messages::Video,
-    telegram_messages::Menu,
-    telegram_messages::Answer>;
+using Message = std::variant<
+    telegram::messages::TextMessage,
+    telegram::messages::OnDemandPhoto,
+    telegram::messages::AlarmPhoto,
+    telegram::messages::Preview,
+    telegram::messages::Video,
+    telegram::messages::Menu,
+    telegram::messages::Answer>;
 
+}  // namespace telegram
 
 template <class... Ts>
 struct Overloaded : Ts... {
