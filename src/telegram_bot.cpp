@@ -459,7 +459,7 @@ void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
         }
 
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::OnDemandPhoto{std::move(recipients), file_path});
+        messages_queue_.push_back(telegram_messages::OnDemandPhoto{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -467,7 +467,7 @@ void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
 void TelegramBot::PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
     {
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::AlarmPhoto{file_path, classes_detected});
+        messages_queue_.push_back(telegram_messages::AlarmPhoto{file_path, classes_detected});
     }
     queue_cv_.notify_one();
 }
@@ -476,7 +476,7 @@ void TelegramBot::PostMessage(const std::string& message, const std::optional<ui
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::Message{std::move(recipients), message});
+        messages_queue_.push_back(telegram_messages::Message{std::move(recipients), message});
     }
     queue_cv_.notify_one();
 }
@@ -485,7 +485,7 @@ void TelegramBot::PostVideoPreview(const std::filesystem::path& file_path, const
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::Preview{std::move(recipients), file_path});
+        messages_queue_.push_back(telegram_messages::Preview{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -494,7 +494,7 @@ void TelegramBot::PostVideo(const std::filesystem::path& file_path, const std::o
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::Video{std::move(recipients), file_path});
+        messages_queue_.push_back(telegram_messages::Video{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -502,7 +502,7 @@ void TelegramBot::PostVideo(const std::filesystem::path& file_path, const std::o
 void TelegramBot::PostMenu(uint64_t user_id) {
     {
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::Menu{user_id});
+        messages_queue_.push_back(telegram_messages::Menu{user_id});
     }
     queue_cv_.notify_one();
 }
@@ -510,7 +510,7 @@ void TelegramBot::PostMenu(uint64_t user_id) {
 void TelegramBot::PostAnswerCallback(const std::string& callback_id) {
     {
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(tg_messages::Answer{callback_id});
+        messages_queue_.push_back(telegram_messages::Answer{callback_id});
     }
     queue_cv_.notify_one();
 }
@@ -552,13 +552,13 @@ void TelegramBot::QueueThreadFunc() {
         lock.unlock();
 
         const auto sending_visitor = Overloaded{
-            [this](const tg_messages::Message& message) { SendMessage(message.text, message.recipients); },
-            [this](const tg_messages::OnDemandPhoto& message) { SendOnDemandPhoto(message.file_path, message.recipients); },
-            [this](const tg_messages::AlarmPhoto& message) { SendAlarmPhoto(message.file_path, message.detections); },
-            [this](const tg_messages::Preview& message) { SendVideoPreview(message.file_path, message.recipients); },
-            [this](const tg_messages::Video& message) { SendVideo(message.file_path, message.recipients); },
-            [this](const tg_messages::Menu& message) { SendMenu(message.recipient); },
-            [this](const tg_messages::Answer& message) { SendAnswer(message.callback_id); },
+            [this](const telegram_messages::Message& message) { SendMessage(message.text, message.recipients); },
+            [this](const telegram_messages::OnDemandPhoto& message) { SendOnDemandPhoto(message.file_path, message.recipients); },
+            [this](const telegram_messages::AlarmPhoto& message) { SendAlarmPhoto(message.file_path, message.detections); },
+            [this](const telegram_messages::Preview& message) { SendVideoPreview(message.file_path, message.recipients); },
+            [this](const telegram_messages::Video& message) { SendVideo(message.file_path, message.recipients); },
+            [this](const telegram_messages::Menu& message) { SendMenu(message.recipient); },
+            [this](const telegram_messages::Answer& message) { SendAnswer(message.callback_id); },
         };
         std::visit(sending_visitor, message);
     }

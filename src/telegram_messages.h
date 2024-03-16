@@ -5,7 +5,7 @@
 #include <string>
 #include <variant>
 
-namespace tg_messages {
+namespace telegram_messages {
 
 struct MultipleRecipients {
     std::set<uint64_t> recipients;
@@ -40,16 +40,16 @@ struct Answer {
     std::string callback_id;
 };
 
-} // tg_messages
+} // telegram_messages
 
 using TelegramMessage = std::variant<
-    tg_messages::Message,
-    tg_messages::OnDemandPhoto,
-    tg_messages::AlarmPhoto,
-    tg_messages::Preview,
-    tg_messages::Video,
-    tg_messages::Menu,
-    tg_messages::Answer>;
+    telegram_messages::Message,
+    telegram_messages::OnDemandPhoto,
+    telegram_messages::AlarmPhoto,
+    telegram_messages::Preview,
+    telegram_messages::Video,
+    telegram_messages::Menu,
+    telegram_messages::Answer>;
 
 
 template <class... Ts>
@@ -59,4 +59,4 @@ struct Overloaded : Ts... {
 
 // explicit deduction guide (not needed as of C++20)
 // template <class... Ts>
-//overloaded(Ts...) -> overloaded<Ts...>;
+// Overloaded(Ts...) -> Overloaded<Ts...>;
