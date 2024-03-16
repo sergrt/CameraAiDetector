@@ -44,16 +44,16 @@ public:
 
     static std::string VideoCmdPrefix();
 
-private:
-    // Actual sending - should be called from one thread
-    void SendOnDemandPhoto(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
-    void SendAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected);
-    void SendMessage(const std::string& message, const std::set<uint64_t>& recipients);
-    void SendVideoPreview(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
-    void SendVideo(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients);
-    void SendMenu(uint64_t recipient);
-    void SendAnswer(const std::string& callback_id);
+    // Visitor part: message queue item processing
+    void operator()(const telegram_messages::Message& message);
+    void operator()(const telegram_messages::OnDemandPhoto& message);
+    void operator()(const telegram_messages::AlarmPhoto& message);
+    void operator()(const telegram_messages::Preview& message);
+    void operator()(const telegram_messages::Video& message);
+    void operator()(const telegram_messages::Menu& message);
+    void operator()(const telegram_messages::Answer& message);
 
+private:
     bool IsUserAllowed(uint64_t user_id) const;
 
     void PollThreadFunc();

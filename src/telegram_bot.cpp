@@ -344,44 +344,12 @@ bool TelegramBot::SomeoneIsWaitingForPhoto() const {
     return !users_waiting_for_photo_.empty();
 }
 
-void TelegramBot::SendOnDemandPhoto(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients) {
-    if (std::filesystem::exists(file_path)) {
-        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto caption = "&#128064; " + GetHumanDateTime(file_path.filename().generic_string());  // &#128064; - eyes
-
-        for (const auto& user : recipients) {
-            try {
-                if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                    LOG_ERROR << "On-demand photo send failed to user " << user;
-            } catch (std::exception& e) {
-                LOG_EXCEPTION("Exception while sending photo", e);
-            }
-        }
-    }
-}
-
-void TelegramBot::SendAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
-    if (std::filesystem::exists(file_path)) {
-        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto caption = "&#10071; "
-            + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
-            + (classes_detected.empty() ? "" : " (" + classes_detected + ")");
-
-        for (const auto& user : allowed_users_) {
-            try {
-                if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                    LOG_ERROR << "Alarm photo send failed to user " << user;
-            } catch (std::exception& e) {
-                LOG_EXCEPTION("Exception while sending photo", e);
-            }
-        }
-    }
-}
-
-void TelegramBot::SendMessage(const std::string& message, const std::set<uint64_t>& recipients) {
-    for (const auto& user : recipients) {
+////////////////////////////////
+// Visitor part
+void TelegramBot::operator()(const telegram_messages::Message& message) {
+    for (const auto& user : message.recipients) {
         try {
-            if (!bot_->getApi().sendMessage(user, message, false, 0, nullptr, "HTML"))
+            if (!bot_->getApi().sendMessage(user, message.text, false, 0, nullptr, "HTML"))
                 LOG_ERROR << "Message send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending message", e);
@@ -389,66 +357,127 @@ void TelegramBot::SendMessage(const std::string& message, const std::set<uint64_
     }
 }
 
-void TelegramBot::SendVideoPreview(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients) {
+void TelegramBot::operator()(const telegram_messages::OnDemandPhoto& message) {
+    const auto& file_path = message.file_path;
+
+    if (!std::filesystem::exists(file_path)) {
+        LOG_ERROR << "On-demand photo file is missing: " << file_path;
+        return;
+    }
+
+    const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+    const auto caption = "&#128064; " + GetHumanDateTime(file_path.filename().generic_string());  // &#128064; - eyes
+
+    for (const auto& user : message.recipients) {
+        try {
+            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
+                LOG_ERROR << "On-demand photo send failed to user " << user;
+        } catch (std::exception& e) {
+            LOG_EXCEPTION("Exception while sending photo", e);
+        }
+    }
+}
+
+void TelegramBot::operator()(const telegram_messages::AlarmPhoto& message) {
+    const auto& file_path = message.file_path;
+
+    if (!std::filesystem::exists(file_path)) {
+        LOG_ERROR << "Alarm photo file is missing: " << file_path;
+        return;
+    }
+
+    const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+    const auto caption = "&#10071; "
+        + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
+        + (message.detections.empty() ? "" : " (" + message.detections + ")");
+
+    for (const auto& user : allowed_users_) {
+        try {
+            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
+                LOG_ERROR << "Alarm photo send failed to user " << user;
+        } catch (std::exception& e) {
+            LOG_EXCEPTION("Exception while sending photo", e);
+        }
+    }
+}
+
+void TelegramBot::operator()(const telegram_messages::Preview& message) {
+    const auto& file_path = message.file_path;
+
+    if (!std::filesystem::exists(file_path)) {
+        LOG_ERROR << "Preview file is missing: " << file_path;
+        return;
+    }
+
     const auto file_name = file_path.filename().generic_string();
     const auto uid = GetUidFromFileName(file_name);
     const auto video_file_path = storage_path_ / VideoWriter::GenerateVideoFileName(uid);
-    if (std::filesystem::exists(file_path) && std::filesystem::exists(video_file_path)) {
-        const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-        const auto cmd = VideoCmdPrefix() + uid;
 
-        auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
-        auto view_button = std::make_shared<TgBot::InlineKeyboardButton>();
-        
-        view_button->text = GetHumanDateTime(file_name) + " (" + std::to_string(GetFileSizeMb(video_file_path)) + " MB)";
-        view_button->callbackData = cmd;
-        keyboard->inlineKeyboard.push_back({view_button});
+    if (!std::filesystem::exists(video_file_path)) {
+        LOG_ERROR << "Video file is missing: " << file_path;
+        return;
+    }
 
-        for (const auto& user_id : recipients) {
-            try {
-                if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
-                    LOG_ERROR << "Video preview send failed to user " << user_id;
-            } catch (std::exception& e) {
-                LOG_EXCEPTION("Exception while sending photo", e);
-            }
+    const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
+    const auto cmd = VideoCmdPrefix() + uid;
+
+    auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
+    auto view_button = std::make_shared<TgBot::InlineKeyboardButton>();
+
+    view_button->text = GetHumanDateTime(file_name) + " (" + std::to_string(GetFileSizeMb(video_file_path)) + " MB)";
+    view_button->callbackData = cmd;
+    keyboard->inlineKeyboard.push_back({view_button});
+
+    for (const auto& user_id : message.recipients) {
+        try {
+            if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
+                LOG_ERROR << "Video preview send failed to user " << user_id;
+        } catch (std::exception& e) {
+            LOG_EXCEPTION("Exception while sending photo", e);
         }
     }
 }
 
-void TelegramBot::SendVideo(const std::filesystem::path& file_path, const std::set<uint64_t>& recipients) {
-    if (std::filesystem::exists(file_path)) {
-        const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-        const auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
+void TelegramBot::operator()(const telegram_messages::Video& message) {
+    const auto& file_path = message.file_path;
 
-        for (const auto& user_id : recipients) {
-            try {
-                if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
-                    LOG_ERROR << "Video file " << file_path << " send failed to user " << user_id;
-            } catch (std::exception& e) {
-                LOG_EXCEPTION("Exception while sending video", e);
-            }
+    if (!std::filesystem::exists(file_path)) {
+        LOG_ERROR << "Video file is missing: " << file_path;
+        return;
+    }
+
+    const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
+    const auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
+
+    for (const auto& user_id : message.recipients) {
+        try {
+            if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
+                LOG_ERROR << "Video file " << file_path << " send failed to user " << user_id;
+        } catch (std::exception& e) {
+            LOG_EXCEPTION("Exception while sending video", e);
         }
     }
 }
 
-void TelegramBot::SendMenu(uint64_t recipient) {
+void TelegramBot::operator()(const telegram_messages::Menu& message) {
     try {
-        if (!bot_->getApi().sendMessage(recipient, translation::menu::kCaption, false, 0, MakeStartMenu(), "HTML"))
-            LOG_ERROR << "/start reply send failed to user " << recipient;
+        if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, false, 0, MakeStartMenu(), "HTML"))
+            LOG_ERROR << "/start reply send failed to user " << message.recipient;
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while sending menu", e);
     }
 }
 
-void TelegramBot::SendAnswer(const std::string& callback_id) {
+void TelegramBot::operator()(const telegram_messages::Answer& message) {
     try {
-        if (!bot_->getApi().answerCallbackQuery(callback_id))
+        if (!bot_->getApi().answerCallbackQuery(message.callback_id))
             LOG_ERROR << "Answer callback query send failed";
     } catch (std::exception& e) {
         // Timed-out queries trigger this exception, so this exception might be non-fatal, but still logged
         LOG_EXCEPTION("Exception (non-fatal?) while sending answer callback query", e);
     }
 }
+////////////////////////////////
 
 void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
     {
@@ -551,16 +580,7 @@ void TelegramBot::QueueThreadFunc() {
         messages_queue_.pop_front();
         lock.unlock();
 
-        const auto sending_visitor = Overloaded{
-            [this](const telegram_messages::Message& message) { SendMessage(message.text, message.recipients); },
-            [this](const telegram_messages::OnDemandPhoto& message) { SendOnDemandPhoto(message.file_path, message.recipients); },
-            [this](const telegram_messages::AlarmPhoto& message) { SendAlarmPhoto(message.file_path, message.detections); },
-            [this](const telegram_messages::Preview& message) { SendVideoPreview(message.file_path, message.recipients); },
-            [this](const telegram_messages::Video& message) { SendVideo(message.file_path, message.recipients); },
-            [this](const telegram_messages::Menu& message) { SendMenu(message.recipient); },
-            [this](const telegram_messages::Answer& message) { SendAnswer(message.callback_id); },
-        };
-        std::visit(sending_visitor, message);
+        std::visit(*this, message);
     }
 }
 
