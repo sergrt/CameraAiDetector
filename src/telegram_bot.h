@@ -1,5 +1,7 @@
 #pragma once
 
+#include "telegram_messages.h"
+
 #include <tgbot/tgbot.h>
 
 #include <atomic>
@@ -10,24 +12,6 @@
 #include <set>
 #include <string>
 #include <thread>
-
-// TODO: Use visitor pattern with different item types to get rid of unused fields for certain items
-struct NotificationQueueItem {
-    enum class Type {
-        kMessage,
-        kOnDemandPhoto,
-        kAlarmPhoto,
-        kPreview,
-        kVideo,
-        kMenu,
-        kAnswer
-    };
-
-    Type type;
-    std::string payload;
-    std::filesystem::path file_path;
-    std::set<uint64_t> recipients;
-};
 
 struct Filter {
     // Using struct here - potentially this filter is extensible to different types of detects etc.
@@ -92,7 +76,7 @@ private:
     std::set<uint64_t> users_waiting_for_photo_;
     mutable std::mutex photo_mutex_;
 
-    std::deque<NotificationQueueItem> notification_queue_;
+    std::deque<TelegramMessage> messages_queue_;
     std::jthread queue_thread_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;

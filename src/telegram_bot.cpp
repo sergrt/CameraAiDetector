@@ -459,7 +459,7 @@ void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
         }
 
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kOnDemandPhoto, "", file_path, recipients);
+        messages_queue_.push_back(tg_messages::OnDemandPhoto{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -467,7 +467,7 @@ void TelegramBot::PostOnDemandPhoto(const std::filesystem::path& file_path) {
 void TelegramBot::PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kAlarmPhoto, classes_detected, file_path);
+        messages_queue_.push_back(tg_messages::AlarmPhoto{file_path, classes_detected});
     }
     queue_cv_.notify_one();
 }
@@ -476,7 +476,7 @@ void TelegramBot::PostMessage(const std::string& message, const std::optional<ui
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kMessage, message, "", recipients);
+        messages_queue_.push_back(tg_messages::Message{std::move(recipients), message});
     }
     queue_cv_.notify_one();
 }
@@ -485,7 +485,7 @@ void TelegramBot::PostVideoPreview(const std::filesystem::path& file_path, const
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kPreview, "", file_path, std::move(recipients));
+        messages_queue_.push_back(tg_messages::Preview{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -494,7 +494,7 @@ void TelegramBot::PostVideo(const std::filesystem::path& file_path, const std::o
     {
         std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kVideo, "", file_path, std::move(recipients));
+        messages_queue_.push_back(tg_messages::Video{std::move(recipients), file_path});
     }
     queue_cv_.notify_one();
 }
@@ -502,7 +502,7 @@ void TelegramBot::PostVideo(const std::filesystem::path& file_path, const std::o
 void TelegramBot::PostMenu(uint64_t user_id) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kMenu, "", "", std::set<uint64_t>{user_id});
+        messages_queue_.push_back(tg_messages::Menu{user_id});
     }
     queue_cv_.notify_one();
 }
@@ -510,7 +510,7 @@ void TelegramBot::PostMenu(uint64_t user_id) {
 void TelegramBot::PostAnswerCallback(const std::string& callback_id) {
     {
         std::lock_guard lock(queue_mutex_);
-        notification_queue_.emplace_back(NotificationQueueItem::Type::kAnswer, callback_id, "", std::set<uint64_t>{});
+        messages_queue_.push_back(tg_messages::Answer{callback_id});
     }
     queue_cv_.notify_one();
 }
@@ -543,29 +543,24 @@ void TelegramBot::PollThreadFunc() {
 void TelegramBot::QueueThreadFunc() {
     while (!stop_) {
         std::unique_lock lock(queue_mutex_);
-        queue_cv_.wait(lock, [&] { return !notification_queue_.empty() || stop_; });
+        queue_cv_.wait(lock, [&] { return !messages_queue_.empty() || stop_; });
         if (stop_)
             break;
 
-        const auto item = notification_queue_.front();
-        notification_queue_.pop_front();
+        const auto message = messages_queue_.front();
+        messages_queue_.pop_front();
         lock.unlock();
 
-        if (item.type == NotificationQueueItem::Type::kMessage) {
-            SendMessage(item.payload, item.recipients);
-        } else if (item.type == NotificationQueueItem::Type::kOnDemandPhoto) {
-            SendOnDemandPhoto(item.file_path, item.recipients);
-        } else if (item.type == NotificationQueueItem::Type::kAlarmPhoto) {
-            SendAlarmPhoto(item.file_path, item.payload);
-        } else if (item.type == NotificationQueueItem::Type::kPreview) {
-            SendVideoPreview(item.file_path, item.recipients);
-        } else if (item.type == NotificationQueueItem::Type::kVideo) {
-            SendVideo(item.file_path , item.recipients);
-        } else if (item.type == NotificationQueueItem::Type::kMenu) {
-            SendMenu(*item.recipients.begin());
-        } else if (item.type == NotificationQueueItem::Type::kAnswer) {
-            SendAnswer(item.payload);
-        }
+        const auto sending_visitor = Overloaded{
+            [this](const tg_messages::Message& message) { SendMessage(message.text, message.recipients); },
+            [this](const tg_messages::OnDemandPhoto& message) { SendOnDemandPhoto(message.file_path, message.recipients); },
+            [this](const tg_messages::AlarmPhoto& message) { SendAlarmPhoto(message.file_path, message.detections); },
+            [this](const tg_messages::Preview& message) { SendVideoPreview(message.file_path, message.recipients); },
+            [this](const tg_messages::Video& message) { SendVideo(message.file_path, message.recipients); },
+            [this](const tg_messages::Menu& message) { SendMenu(message.recipient); },
+            [this](const tg_messages::Answer& message) { SendAnswer(message.callback_id); },
+        };
+        std::visit(sending_visitor, message);
     }
 }
 

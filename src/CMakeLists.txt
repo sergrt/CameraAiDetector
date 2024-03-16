@@ -79,6 +79,7 @@ set(HEADER
     simple_motion_detect.h
     stream_properties.h
     telegram_bot.h
+    telegram_messages.h
     translation.h
     uid_utils.h
     video_writer.h)

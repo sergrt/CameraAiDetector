@@ -4,7 +4,7 @@
 
 //#define LANG_RU
 
-namespace translation{
+namespace translation {
 
 namespace menu {
 
