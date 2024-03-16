@@ -85,6 +85,7 @@ std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
 struct VideoFileInfo {
     std::string uid;
     size_t size_mb;
+
     bool operator<(const VideoFileInfo& other) const {
         return uid < other.uid;
     }

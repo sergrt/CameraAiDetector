@@ -70,7 +70,7 @@ private:
     std::set<uint64_t> users_waiting_for_photo_;
     mutable std::mutex photo_mutex_;
 
-    std::deque<telegram::Message> messages_queue_;
+    std::deque<Message> messages_queue_;
     std::jthread queue_thread_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
