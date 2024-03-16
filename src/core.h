@@ -4,7 +4,7 @@
 #include "error_reporter.h"
 #include "frame_reader.h"
 #include "settings.h"
-#include "telegram_bot.h"
+#include "telegram_bot_facade.h"
 #include "video_writer.h"
 
 #include <atomic>

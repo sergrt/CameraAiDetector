@@ -23,7 +23,7 @@ Core::Core(Settings settings)
     frame_reader_.Open();
 
     if (settings_.notify_on_start)
-        bot_.PostMessage(translation::messages::kAppStarted);
+        bot_.PostTextMessage(translation::messages::kAppStarted);
 }
 
 Core::~Core() {

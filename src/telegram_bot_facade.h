@@ -1,7 +1,7 @@
 #pragma once
 
-#include "message_sender.h"
 #include "telegram_messages.h"
+#include "telegram_messages_sender.h"
 
 #include <tgbot/tgbot.h>
 
@@ -35,13 +35,10 @@ public:
     void Stop();
 
     // Post to sending queue - thread safe
-    void PostOnDemandPhoto(
-        const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
-    void PostAlarmPhoto(const std::filesystem::path& file_path,
-                        const std::string& classes_detected);  // No user id - goes to all users
+    void PostOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
+    void PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected);  // No user id - goes to all users
     void PostTextMessage(const std::string& message, const std::optional<uint64_t>& user_id = std::nullopt);
-    void PostVideoPreview(const std::filesystem::path& file_path,
-                          const std::optional<uint64_t>& user_id = std::nullopt);
+    void PostVideoPreview(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostVideo(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostMenu(uint64_t user_id);
     void PostAnswerCallback(const std::string& callback_id);
@@ -49,6 +46,7 @@ public:
     bool SomeoneIsWaitingForPhoto() const;
 
 private:
+    void SetupBotCommands();
     bool IsUserAllowed(uint64_t user_id) const;
 
     void PollThreadFunc();

@@ -58,8 +58,7 @@ set(SOURCE
     opencv_ai_facade.cpp
     settings.cpp
     simple_motion_detect.cpp
-    telegram_bot.cpp
-    telegram_commands_handler.cpp
+    telegram_bot_facade.cpp
     telegram_messages_sender.cpp
     video_writer.cpp)
 
@@ -80,8 +79,7 @@ set(HEADER
     settings.h
     simple_motion_detect.h
     stream_properties.h
-    telegram_bot.h
-    telegram_commands_handler.h
+    telegram_bot_facade.h
     telegram_messages.h
     telegram_messages_sender.h
     translation.h

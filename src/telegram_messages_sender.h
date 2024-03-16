@@ -4,14 +4,7 @@
 
 #include <tgbot/tgbot.h>
 
-#include <atomic>
-#include <deque>
 #include <filesystem>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <thread>
 
 namespace telegram {
 class MessagesSender final {
@@ -27,7 +20,7 @@ public:
     void operator()(const telegram::messages::Answer& message);
 
 private:
-    const TgBot::Bot* const bot_;
+    TgBot::Bot* const bot_;
     const std::filesystem::path storage_path_;
     const TgBot::InlineKeyboardMarkup::Ptr start_menu_;
 };

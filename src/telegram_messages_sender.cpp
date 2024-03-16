@@ -1,20 +1,12 @@
-#include "message_sender.h"
+#include "telegram_messages_sender.h"
 
 #include "helpers.h"
-
 #include "log.h"
-
-#include "ring_buffer.h"
-#include "safe_ptr.h"
 #include "translation.h"
 #include "uid_utils.h"
 #include "video_writer.h"
 
-#include <algorithm>
-#include <chrono>
 #include <filesystem>
-#include <regex>
-#include <set>
 
 namespace {
 
@@ -120,8 +112,7 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
     }
 
     const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
-    const auto caption = "&#10071; " +
-                         GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
+    const auto caption = "&#10071; " + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
                          + (message.detections.empty() ? "" : " (" + message.detections + ")");
 
     for (const auto& user : message.recipients) {
@@ -180,8 +171,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
     }
 
     const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-    const auto caption =
-        "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
+    const auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
 
     for (const auto& user_id : message.recipients) {
         try {

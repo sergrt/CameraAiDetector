@@ -1,4 +1,4 @@
-#include "telegram_bot.h"
+#include "telegram_bot_facade.h"
 
 #include "helpers.h"
 #include "log.h"
@@ -15,7 +15,6 @@
 #include <set>
 
 constexpr size_t kMaxMessageLen = 4096;
-
 
 extern SafePtr<RingBuffer<std::string>> AppLogTail;
 extern std::chrono::time_point<std::chrono::steady_clock> kStartTime;
@@ -115,45 +114,50 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
       message_sender_{bot_.get(), storage_path},
       storage_path_{std::move(storage_path)},
       allowed_users_{std::move(allowed_users)} {
+
+    SetupBotCommands();
+}
+
+void BotFacade::SetupBotCommands() {
     bot_->getEvents().onCommand(telegram::commands::kStart, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kStart << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             PostMenu(id);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kImage, [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(telegram::commands::kImage, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kImage << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessOnDemandCmd(id);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kPing, [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(telegram::commands::kPing, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kPing << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessPingCmd(id);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kVideos, [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(telegram::commands::kVideos, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kVideos << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessVideosCmd(id, filter);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kPreviews, [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(telegram::commands::kPreviews, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kPreviews << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessPreviewsCmd(id, filter);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kLog, [&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onCommand(telegram::commands::kLog, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kLog << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessLogCmd(id);
         }
     });
-    bot_->getEvents().onAnyMessage([&](TgBot::Message::Ptr message) {
+    bot_->getEvents().onAnyMessage([this](TgBot::Message::Ptr message) {
         LogInfo() << "Received message " << message->text << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             if (StringTools::startsWith(message->text, telegram::commands::VideoCmdPrefix())) {
@@ -166,7 +170,7 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
             LogWarning() << "Unauthorized user tried to access: " << id;
         }
     });
-    bot_->getEvents().onCallbackQuery([&](TgBot::CallbackQuery::Ptr query) {
+    bot_->getEvents().onCallbackQuery([this](TgBot::CallbackQuery::Ptr query) {
         LogInfo() << "Received callback query " << query->message->text << " from user " << query->message->chat->id
                   << " @ " << GetDateTime(query->message);
         if (const auto id = query->message->chat->id; IsUserAllowed(id)) {
@@ -175,13 +179,11 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
                 const std::string video_id = query->data.substr(telegram::commands::VideoCmdPrefix().size());
                 ProcessVideoCmd(id, video_id);
                 PostAnswerCallback(query->id);
-            } else if (StringTools::startsWith(
-                           command, telegram::commands::kPreviews)) {  // Space is a separator between cmd and filter
+            } else if (StringTools::startsWith(command, telegram::commands::kPreviews)) {  // Space is a separator between cmd and filter
                 const auto filter = GetFilter(command.substr(telegram::commands::kPreviews.size()));
                 ProcessPreviewsCmd(id, filter);
                 PostAnswerCallback(query->id);
-            } else if (StringTools::startsWith(
-                           command, telegram::commands::kVideos)) {  // Space is a separator between cmd and filter
+            } else if (StringTools::startsWith(command, telegram::commands::kVideos)) {  // Space is a separator between cmd and filter
                 const auto filter = GetFilter(command.substr(telegram::commands::kVideos.size()));
                 ProcessVideosCmd(id, filter);
                 PostAnswerCallback(query->id);

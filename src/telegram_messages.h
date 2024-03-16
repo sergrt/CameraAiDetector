@@ -9,14 +9,13 @@ namespace telegram {
 
 namespace commands {
 
-// TODO: move to cpp file
-const auto kStart = std::string("start");
-const auto kPreviews = std::string("previews");
-const auto kVideos = std::string("videos");
-const auto kVideo = std::string("video");
-const auto kImage = std::string("image");
-const auto kPing = std::string("ping");
-const auto kLog = std::string("log");
+inline constexpr auto kStart = std::string("start");
+inline constexpr auto kPreviews = std::string("previews");
+inline constexpr auto kVideos = std::string("videos");
+inline constexpr auto kVideo = std::string("video");
+inline constexpr auto kImage = std::string("image");
+inline constexpr auto kPing = std::string("ping");
+inline constexpr auto kLog = std::string("log");
 
 inline std::string VideoCmdPrefix() {
     auto video_prefix = "/" + kVideo + "_";
@@ -73,10 +72,10 @@ using Message = std::variant<
 
 }  // namespace telegram
 
-template <class... Ts>
-struct Overloaded : Ts... {
-    using Ts::operator()...;
-};
+// template <class... Ts>
+// struct Overloaded : Ts... {
+//     using Ts::operator()...;
+// };
 
 // explicit deduction guide (not needed as of C++20)
 // template <class... Ts>
