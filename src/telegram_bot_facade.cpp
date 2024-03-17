@@ -163,8 +163,7 @@ void BotFacade::SetupBotCommands() {
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             if (StringTools::startsWith(message->text, telegram::commands::VideoCmdPrefix())) {
                 LogInfo() << "video command received: " << message->text;
-                const std::string uid =
-                    message->text.substr(telegram::commands::VideoCmdPrefix().size());  // uid of file
+                const std::string uid = message->text.substr(telegram::commands::VideoCmdPrefix().size());  // uid of file
                 ProcessVideoCmd(id, uid);
             }
         } else {
@@ -221,8 +220,7 @@ void BotFacade::ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& 
 
     std::string commands_message;
     for (const auto& file : files) {
-        std::string command =
-            telegram::commands::VideoCmdPrefix() + file.uid + " (" + std::to_string(file.size_mb) + " MB)\n";
+        std::string command = telegram::commands::VideoCmdPrefix() + file.uid + " (" + std::to_string(file.size_mb) + " MB)\n";
         if (commands_message.size() + command.size() > kMaxMessageLen) {
             PostTextMessage(commands_message, user_id);
             commands_message = command;
