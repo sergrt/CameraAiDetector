@@ -369,7 +369,7 @@ void BotFacade::PollThreadFunc(std::stop_token stop_token) {
 
     TgBot::TgLongPoll long_poll(*bot_);
 
-    while (not stop_token.stop_requested()) {
+    while (!stop_token.stop_requested()) {
         try {
             LogTrace() << "LongPoll start";
             long_poll.start();
@@ -380,7 +380,7 @@ void BotFacade::PollThreadFunc(std::stop_token stop_token) {
 }
 
 void BotFacade::QueueThreadFunc(std::stop_token stop_token) {
-    while (not stop_token.stop_requested()) {
+    while (!stop_token.stop_requested()) {
         std::unique_lock lock(queue_mutex_);
         queue_cv_.wait(lock, [&] { return !messages_queue_.empty() || stop_token.stop_requested(); });
         if (stop_token.stop_requested())
