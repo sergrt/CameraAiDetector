@@ -4,10 +4,9 @@
 #include "error_reporter.h"
 #include "frame_reader.h"
 #include "settings.h"
-#include "telegram_bot.h"
+#include "telegram_bot_facade.h"
 #include "video_writer.h"
 
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -31,8 +30,8 @@ public:
     void Stop();
 
 private:
-    void CaptureThreadFunc();
-    void ProcessingThreadFunc();
+    void CaptureThreadFunc(std::stop_token stop_token);
+    void ProcessingThreadFunc(std::stop_token stop_token);
 
     void PostOnDemandPhoto(const cv::Mat& frame);
     void PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& detections);
@@ -47,13 +46,12 @@ private:
 
     const Settings settings_;
     FrameReader frame_reader_;
-    TelegramBot bot_;
+    telegram::BotFacade bot_;
     std::unique_ptr<Ai> ai_;
     std::unique_ptr<VideoWriter> video_writer_;
 
     std::jthread capture_thread_;
     std::jthread processing_thread_;
-    std::atomic_bool stop_ = true;
 
     std::optional<std::chrono::time_point<std::chrono::steady_clock>> first_cooldown_frame_timestamp_;
     std::chrono::time_point<std::chrono::steady_clock> last_alarm_photo_sent_ = std::chrono::steady_clock::now() - std::chrono::hours(100);  // std::chrono::time_point<std::chrono::steady_clock>::max();

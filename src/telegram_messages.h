@@ -5,13 +5,32 @@
 #include <string>
 #include <variant>
 
-namespace telegram_messages {
+namespace telegram {
+
+namespace commands {
+
+inline const auto kStart = std::string("start");
+inline const auto kPreviews = std::string("previews");
+inline const auto kVideos = std::string("videos");
+inline const auto kVideo = std::string("video");
+inline const auto kImage = std::string("image");
+inline const auto kPing = std::string("ping");
+inline const auto kLog = std::string("log");
+
+inline std::string VideoCmdPrefix() {
+    auto video_prefix = "/" + kVideo + "_";
+    return video_prefix;
+}
+
+}  // namespace commands
+
+namespace messages {
 
 struct MultipleRecipients {
     std::set<uint64_t> recipients;
 };
 
-struct Message : public MultipleRecipients {
+struct TextMessage : public MultipleRecipients {
     std::string text;
 };
 
@@ -19,7 +38,7 @@ struct OnDemandPhoto : public MultipleRecipients {
     std::filesystem::path file_path;
 };
 
-struct AlarmPhoto {
+struct AlarmPhoto : public MultipleRecipients {
     std::filesystem::path file_path;
     std::string detections;
 };
@@ -40,22 +59,23 @@ struct Answer {
     std::string callback_id;
 };
 
-} // telegram_messages
+}  // namespace messages
 
-using TelegramMessage = std::variant<
-    telegram_messages::Message,
-    telegram_messages::OnDemandPhoto,
-    telegram_messages::AlarmPhoto,
-    telegram_messages::Preview,
-    telegram_messages::Video,
-    telegram_messages::Menu,
-    telegram_messages::Answer>;
+using Message = std::variant<
+    telegram::messages::TextMessage,
+    telegram::messages::OnDemandPhoto,
+    telegram::messages::AlarmPhoto,
+    telegram::messages::Preview,
+    telegram::messages::Video,
+    telegram::messages::Menu,
+    telegram::messages::Answer>;
 
+}  // namespace telegram
 
-template <class... Ts>
-struct Overloaded : Ts... {
-    using Ts::operator()...;
-};
+// template <class... Ts>
+// struct Overloaded : Ts... {
+//     using Ts::operator()...;
+// };
 
 // explicit deduction guide (not needed as of C++20)
 // template <class... Ts>

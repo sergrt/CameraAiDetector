@@ -1,6 +1,6 @@
 #pragma once
 
-#include "telegram_bot.h"
+#include "telegram_bot_facade.h"
 
 #include <string>
 
@@ -11,12 +11,12 @@ public:
         kNoError = 1,
     };
 
-    ErrorReporter(TelegramBot* telegram_bot, std::string activation_msg, std::string deactivation_msg);
+    ErrorReporter(telegram::BotFacade* telegram_bot, std::string activation_msg, std::string deactivation_msg);
 
     void Update(ErrorState error_state);
 
 private:
-    TelegramBot* const bot_;
+    telegram::BotFacade* const bot_;
     std::string activation_msg_;
     std::string deactivation_msg_;
     ErrorState cur_state_{ErrorState::kNoError};
