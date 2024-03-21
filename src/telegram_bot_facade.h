@@ -5,7 +5,6 @@
 
 #include <tgbot/tgbot.h>
 
-#include <atomic>
 #include <deque>
 #include <filesystem>
 #include <memory>
@@ -49,8 +48,8 @@ private:
     void SetupBotCommands();
     bool IsUserAllowed(uint64_t user_id) const;
 
-    void PollThreadFunc();
-    void QueueThreadFunc();
+    void PollThreadFunc(std::stop_token stop_token);
+    void QueueThreadFunc(std::stop_token stop_token);
 
     void ProcessOnDemandCmd(uint64_t user_id);
     void ProcessPingCmd(uint64_t user_id);
@@ -65,7 +64,6 @@ private:
     std::set<uint64_t> allowed_users_;
 
     std::jthread poll_thread_;
-    std::atomic_bool stop_{true};
 
     std::set<uint64_t> users_waiting_for_photo_;
     mutable std::mutex photo_mutex_;

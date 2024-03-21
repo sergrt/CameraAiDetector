@@ -93,17 +93,17 @@ void Core::PostVideo(const std::string& uid) {
     bot_.PostVideo(file_path);
 }
 
-void Core::ProcessingThreadFunc() {
+void Core::ProcessingThreadFunc(std::stop_token stop_token) {
     const auto scaled_size = cv::Size(
         static_cast<int>(frame_reader_.GetStreamProperties().width * settings_.img_scale_x),
         static_cast<int>(frame_reader_.GetStreamProperties().height * settings_.img_scale_y));
     const auto img_format = "." + settings_.img_format;
 
-    while (!stop_) {
+    while (!stop_token.stop_requested()) {
         std::unique_lock lock(buffer_mutex_);
-        buffer_cv_.wait(lock, [&] { return !buffer_.empty() || stop_; });
+        buffer_cv_.wait(lock, [&] { return !buffer_.empty() || stop_token.stop_requested(); });
 
-        if (stop_)
+        if (stop_token.stop_requested())
             break;
 
         const cv::Mat frame = std::move(buffer_.front());
@@ -195,8 +195,8 @@ bool Core::IsAlarmImageDelayPassed() const {
     return std::chrono::steady_clock::now() - last_alarm_photo_sent_ > std::chrono::milliseconds(settings_.alarm_notification_delay_ms);
 }
 
-void Core::CaptureThreadFunc() {
-    while (!stop_) {
+void Core::CaptureThreadFunc(std::stop_token stop_token) {
+    while (!stop_token.stop_requested()) {
         cv::Mat frame;
         if (!frame_reader_.GetFrame(frame)) {
             ++get_frame_error_count_;
@@ -242,31 +242,32 @@ void Core::CaptureThreadFunc() {
             }
         }
     }
-    stop_ = true;
 }
 
 void Core::Start() {
-    if (!stop_) {
+    if (capture_thread_.joinable() || processing_thread_.joinable()) {
         LogInfo() << "Attempt start() on already running core";
         return;
     }
 
-    stop_ = false;
-    capture_thread_ = std::jthread(&Core::CaptureThreadFunc, this);
-    processing_thread_ = std::jthread(&Core::ProcessingThreadFunc, this);
+    capture_thread_ = std::jthread(std::bind_front(&Core::CaptureThreadFunc, this));
+    processing_thread_ = std::jthread(std::bind_front(&Core::ProcessingThreadFunc, this));
 }
 
 void Core::Stop() {
-    if (stop_) {
-        LogInfo() << "Attempt stop() on already stopped core";
+    const auto capture_stop_requested = capture_thread_.request_stop();
+    const auto processing_stop_requested = processing_thread_.request_stop();
+
+    if (!capture_stop_requested || !processing_stop_requested) {
+        LogInfo() << "Attempt stop() on already stopped core. Capture stop request result = " << capture_stop_requested
+                  << ", processing stop request result = " << processing_stop_requested;
     }
-    stop_ = true;
+
     buffer_cv_.notify_all();
 
-    /* Uncomment this if std::thread is used instead of std::jthread
+    // In case this function is not called from within destructor, ensure that threads are stopped
     if (capture_thread_.joinable())
         capture_thread_.join();
     if (processing_thread_.joinable())
         processing_thread_.join();
-    */
 }

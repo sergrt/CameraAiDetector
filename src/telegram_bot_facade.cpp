@@ -359,7 +359,7 @@ void BotFacade::PostAnswerCallback(const std::string& callback_id) {
     queue_cv_.notify_one();
 }
 
-void BotFacade::PollThreadFunc() {
+void BotFacade::PollThreadFunc(std::stop_token stop_token) {
     try {
         if (!bot_->getApi().deleteWebhook())
             LOG_ERROR << "Unable to delete bot Webhook";
@@ -369,7 +369,7 @@ void BotFacade::PollThreadFunc() {
 
     TgBot::TgLongPoll long_poll(*bot_);
 
-    while (!stop_) {
+    while (not stop_token.stop_requested()) {
         try {
             LogTrace() << "LongPoll start";
             long_poll.start();
@@ -379,11 +379,11 @@ void BotFacade::PollThreadFunc() {
     }
 }
 
-void BotFacade::QueueThreadFunc() {
-    while (!stop_) {
+void BotFacade::QueueThreadFunc(std::stop_token stop_token) {
+    while (not stop_token.stop_requested()) {
         std::unique_lock lock(queue_mutex_);
-        queue_cv_.wait(lock, [&] { return !messages_queue_.empty() || stop_; });
-        if (stop_)
+        queue_cv_.wait(lock, [&] { return !messages_queue_.empty() || stop_token.stop_requested(); });
+        if (stop_token.stop_requested())
             break;
 
         const auto message = messages_queue_.front();
@@ -395,30 +395,32 @@ void BotFacade::QueueThreadFunc() {
 }
 
 void BotFacade::Start() {
-    if (!stop_) {
+    if (poll_thread_.joinable() || queue_thread_.joinable()) {
         LogInfo() << "Attempt start() on already running bot";
         return;
     }
 
-    stop_ = false;
-    poll_thread_ = std::jthread(&BotFacade::PollThreadFunc, this);
-    queue_thread_ = std::jthread(&BotFacade::QueueThreadFunc, this);
+    poll_thread_ = std::jthread(std::bind_front(&BotFacade::PollThreadFunc, this));
+    queue_thread_ = std::jthread(std::bind_front(&BotFacade::QueueThreadFunc, this));
 }
 
 void BotFacade::Stop() {
-    if (stop_) {
-        LogInfo() << "Attempt stop() on already stopped bot";
+    const auto poll_stop_requested = poll_thread_.request_stop();
+    const auto queue_stop_requested = queue_thread_.request_stop();
+
+    if (!poll_stop_requested || !queue_stop_requested) {
+        LogInfo() << "Attempt stop() on already stopped bot. Poll stop request result = " << poll_stop_requested
+                  << ", queue stop request result = " << queue_stop_requested;
     }
-    stop_ = true;
+
     queue_cv_.notify_all();
 
-    /* Uncomment this if std::thread is used instead of std::jthread
+    // In case this function is not called from within destructor, ensure that threads are stopped
     if (poll_thread_.joinable())
         poll_thread_.join();
 
     if (queue_thread_.joinable())
         queue_thread_.join();
-    */
 }
 
 }  // namespace telegram
