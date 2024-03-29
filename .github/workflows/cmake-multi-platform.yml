@@ -72,7 +72,7 @@ jobs:
         sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
 
     - name: Checkout repository
-    - uses: actions/checkout@v3
+      uses: actions/checkout@v3
       with:
         submodules: 'true'
 
