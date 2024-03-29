@@ -71,7 +71,10 @@ jobs:
         sudo ln -sf /usr/bin/clang-17 /usr/bin/clang
         sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
 
+    - name: Checkout repository
     - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
 
     - name: Install dependencies (linux)
       if: startsWith(matrix.os, 'ubuntu')
@@ -130,11 +133,13 @@ jobs:
     #     cmake -B ${{ github.workspace }}/3rdparty/zlib/build -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -S ${{ github.workspace }}/3rdparty/zlib
     #     cmake --build ${{ github.workspace }}/3rdparty/zlib/build --config ${{ matrix.build_type }}
 
-    - name: Clone nlohmann-json
-      run: git clone https://github.com/nlohmann/json.git ${{ github.workspace }}/3rdparty/json
+    # Do not clone manually - cloned with --recurse-submodules
+    # - name: Clone nlohmann-json
+    #   run: git clone https://github.com/nlohmann/json.git ${{ github.workspace }}/3rdparty/json
 
-    - name: Clone tgbot-cpp
-      run: git clone https://github.com/reo7sp/tgbot-cpp.git ${{ github.workspace }}/3rdparty/tgbot-cpp
+    # Do not clone manually - cloned with --recurse-submodules
+    # - name: Clone tgbot-cpp
+    #   run: git clone https://github.com/reo7sp/tgbot-cpp.git ${{ github.workspace }}/3rdparty/tgbot-cpp
 
     - name: Fix tgbot-cpp modern Boost lib compatibility
       run:
