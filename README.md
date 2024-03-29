@@ -120,13 +120,15 @@ $ cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTAL
 Third-party dependencies could be quite tricky to install under Windows, so here is the fastest way:
 
 #### Clone application repository and create 3rdparty dir:
+With or without submodules. If cloned with `--recurse-submodules` there's no need to clone repos manually later:
 ```
-$ git clone https://github.com/sergrt/CameraAiDetector.git
+$ git clone https://github.com/sergrt/CameraAiDetector.git --recurse-submodules
 $ cd CameraAiDetector
 $ mkdir 3rdparty
 $ cd 3rdparty
 ```
 #### Clone nlohmann-json
+Skip if main repository was cloned with submodules.
 ```
 # From 3rdparty dir:
 $ git clone https://github.com/nlohmann/json.git
@@ -170,6 +172,7 @@ $ cmake ..
 # Build generated project with your compiler, e. g. Visual Studio
 ```
 #### Compile tgbot-cpp
+Skip repo clone if main repository was cloned with submodules.
 ```
 # From 3rdparty dir:
 $ git clone https://github.com/reo7sp/tgbot-cpp.git
