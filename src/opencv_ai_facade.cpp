@@ -149,7 +149,7 @@ std::vector<Detection> OpenCvAiFacade::DetectImpl(const cv::Mat &input_image) {
     std::mutex processing_lock;
     static const int classes_names_sz = static_cast<int>(kClassNames.size());
     float* const output_blobs_data = reinterpret_cast<float*>(output_blobs[0].data);
-    std::for_each(std::execution::par, begin(indexes), end(indexes), [&](const auto& idx) {
+    std::for_each(std::execution::par, begin(indexes), end(indexes), [&, classes_names_sz = classes_names_sz](const auto& idx) {  // explicit capture solves unused var warning
         float* const data = output_blobs_data + idx;
         const float confidence = data[4];
         if (confidence >= min_confidence_) {

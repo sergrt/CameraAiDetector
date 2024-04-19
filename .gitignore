@@ -37,7 +37,7 @@ build/
 #gtest
 gtest/
 
-3rdparty/
+3rdparty/**/build/
 .idea/
 cmake-*/
 latest/

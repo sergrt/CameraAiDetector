@@ -65,10 +65,14 @@ inline bool IsUidValid(const std::string& uid) {
     return std::regex_match(uid, match, uid_regex);
 }
 
-inline std::string GetHumanDateTime(const std::string& file_name) {
-    const auto timestamp = GetTimestampFromUid(GetUidFromFileName(file_name));
-    auto tp_zoned = std::chrono::zoned_time{std::chrono::current_zone(), timestamp};
-    std::string str = std::format("{:%d-%m-%Y %H:%M:%S}", tp_zoned);
+inline std::string GetDateTimeString(const auto& zoned_time) {
+    std::string str = std::format("{:%d-%m-%Y %H:%M:%S}", zoned_time);
     str.erase(begin(str) + str.find('.'), end(str));
     return str;
+}
+
+inline std::string GetHumanDateTime(const std::string& file_name) {
+    const auto timestamp = GetTimestampFromUid(GetUidFromFileName(file_name));
+    const auto tp_zoned = std::chrono::zoned_time{std::chrono::current_zone(), timestamp};
+    return GetDateTimeString(tp_zoned);
 }

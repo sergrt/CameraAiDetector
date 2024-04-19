@@ -12,6 +12,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 namespace telegram {
 
@@ -34,6 +35,7 @@ public:
     void Stop();
 
     // Post to sending queue - thread safe
+    // user_id is the explicit recipient. If supplied and user is paused - the message still will be sent
     void PostOnDemandPhoto(const std::filesystem::path& file_path);  // No user id - waiting users are stored in 'users_waiting_for_photo_'
     void PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected);  // No user id - goes to all users
     void PostTextMessage(const std::string& message, const std::optional<uint64_t>& user_id = std::nullopt);
@@ -45,6 +47,8 @@ public:
     bool SomeoneIsWaitingForPhoto() const;
 
 private:
+    void PostStatusMessage(const std::string& message, uint64_t user_id);
+
     void SetupBotCommands();
     bool IsUserAllowed(uint64_t user_id) const;
 
@@ -52,11 +56,18 @@ private:
     void QueueThreadFunc(std::stop_token stop_token);
 
     void ProcessOnDemandCmd(uint64_t user_id);
-    void ProcessPingCmd(uint64_t user_id);
+    void ProcessStatusCmd(uint64_t user_id);
     void ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter);
     void ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter);
+    void ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_min);
+    void ProcessResumeCmd(uint64_t user_id);
     void ProcessVideoCmd(uint64_t user_id, const std::string& video_uid);
     void ProcessLogCmd(uint64_t user_id);
+
+    std::string PrepareStatusInfo(uint64_t requested_by);
+    void UpdatePausedUsers();
+    void RemoveUserFromPaused(uint64_t user_id);
+    std::set<uint64_t> UpdateAndRemovePausedUsers(const std::set<uint64_t>& users, std::optional<uint64_t> requester = std::nullopt);
 
     std::unique_ptr<TgBot::Bot> bot_;
     MessagesSender message_sender_;
@@ -69,6 +80,7 @@ private:
     mutable std::mutex photo_mutex_;
 
     std::deque<Message> messages_queue_;
+    std::unordered_map<uint64_t, std::chrono::zoned_time<std::chrono::system_clock::duration>> paused_users_;
     std::jthread queue_thread_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;

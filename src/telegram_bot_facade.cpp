@@ -14,7 +14,8 @@
 #include <regex>
 #include <set>
 
-constexpr size_t kMaxMessageLen = 4096;
+constexpr size_t kMaxMessageLen{4096};
+constexpr std::chrono::minutes kDefaultPauseTime{60};
 
 extern SafePtr<RingBuffer<std::string>> AppLogTail;
 extern std::chrono::time_point<std::chrono::steady_clock> kStartTime;
@@ -23,7 +24,7 @@ namespace telegram {
 
 namespace {
 
-std::optional<Filter> GetFilter(const std::string& text) {
+std::optional<std::chrono::minutes> GetParameterTimeMin(const std::string& text) {
     // Filters are time depth, e.g.:
     //   10m
     //   3h
@@ -35,21 +36,28 @@ std::optional<Filter> GetFilter(const std::string& text) {
 
         const auto count = std::strtol(match[1].str().c_str(), nullptr, 10);
         if (count == 0 || errno == ERANGE) {
-            return {};
+            return std::nullopt;
         }
 
-        Filter filter{};
+        std::chrono::minutes res{};
         if (period == "M") {
-            filter.depth = std::chrono::minutes(count);
+            res = std::chrono::minutes(count);
         } else if (period == "H") {
-            filter.depth = std::chrono::minutes(count * 60);
+            res = std::chrono::minutes(count * 60);
         } else if (period == "D") {
-            filter.depth = std::chrono::minutes(count * 60 * 24);
+            res = std::chrono::minutes(count * 60 * 24);
+        } else {
+            throw std::runtime_error("Unhandled time period in parameter");
         }
-        return filter;
+
+        return std::optional<std::chrono::minutes>(res);
     }
 
-    return {};
+    return std::nullopt;
+}
+
+std::optional<Filter> GetFilter(const std::string& text) {
+    return std::optional<Filter>{GetParameterTimeMin(text)};
 }
 
 bool ApplyFilter(const Filter& filter, const std::string& file_name) {
@@ -65,21 +73,6 @@ std::string GetUptime() {
         , (diff_s % 3'600) / 60
         , diff_s % 60);
     return formatted;
-}
-
-std::string PrepareStatusInfo(const std::filesystem::path& storage_path) {
-    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
-    std::string timestamp = std::format("{:%d-%m-%Y %H:%M:%S}", cur_time);
-    timestamp.erase(begin(timestamp) + timestamp.find('.'), end(timestamp));
-
-    std::string free_space = std::to_string(std::filesystem::space(storage_path).available / 1'000'000);
-    for (auto i = static_cast<int>(free_space.size()) - 3; i > 0; i -= 3) {
-        free_space.insert(i, "'");
-    }
-    // Some useful utf chars: &#9989; &#127909; &#128247; &#128680; &#128226; &#128266; &#10071; &#128681; &#8505; &#127916; &#127910; &#128064;
-    return "&#8505; " + timestamp + ",\n"
-        + free_space + " MB " + translation::messages::kAvailable + ",\n"
-        + GetUptime() + " " +  translation::messages::kUptime;
 }
 
 struct VideoFileInfo {
@@ -135,7 +128,7 @@ void BotFacade::SetupBotCommands() {
     bot_->getEvents().onCommand(telegram::commands::kPing, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kPing << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
-            ProcessPingCmd(id);
+            ProcessStatusCmd(id);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kVideos, [this](TgBot::Message::Ptr message) {
@@ -156,6 +149,21 @@ void BotFacade::SetupBotCommands() {
         LogInfo() << "Received command " << telegram::commands::kLog << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessLogCmd(id);
+        }
+    });
+    bot_->getEvents().onCommand(telegram::commands::kPause, [this](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
+        if (const auto id = message->chat->id; IsUserAllowed(id)) {
+            auto pause_min = GetParameterTimeMin(message->text);
+            if (!pause_min)
+                *pause_min = kDefaultPauseTime;
+            ProcessPauseCmd(id, *pause_min);
+        }
+    });
+    bot_->getEvents().onCommand(telegram::commands::kResume, [this](TgBot::Message::Ptr message) {
+        LogInfo() << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
+        if (const auto id = message->chat->id; IsUserAllowed(id)) {
+            ProcessResumeCmd(id);
         }
     });
     bot_->getEvents().onAnyMessage([this](TgBot::Message::Ptr message) {
@@ -191,7 +199,16 @@ void BotFacade::SetupBotCommands() {
                 ProcessOnDemandCmd(id);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, telegram::commands::kPing)) {
-                ProcessPingCmd(id);
+                ProcessStatusCmd(id);
+                PostAnswerCallback(query->id);
+            } else if (StringTools::startsWith(command, telegram::commands::kPause)) {
+                auto pause_min = GetParameterTimeMin(command.substr(telegram::commands::kPause.size()));
+                if (!pause_min)
+                    *pause_min = kDefaultPauseTime;
+                 ProcessPauseCmd(id, *pause_min);
+                 PostAnswerCallback(query->id);
+            } else if (StringTools::startsWith(command, telegram::commands::kResume)) {
+                ProcessResumeCmd(id);
                 PostAnswerCallback(query->id);
             }
         }
@@ -202,13 +219,35 @@ BotFacade::~BotFacade() {
     Stop();
 }
 
+std::string BotFacade::PrepareStatusInfo(uint64_t requested_by) {
+    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+    std::string timestamp = std::format("{:%d-%m-%Y %H:%M:%S}", cur_time);
+    timestamp.erase(begin(timestamp) + timestamp.find('.'), end(timestamp));
+
+    std::string free_space = std::to_string(std::filesystem::space(storage_path_).available / 1'000'000);
+    for (auto i = static_cast<int>(free_space.size()) - 3; i > 0; i -= 3) {
+        free_space.insert(i, "'");
+    }
+    // Some useful utf chars: &#9989; &#127909; &#128247; &#128680; &#128226; &#128266; &#10071; &#128681; &#8505;
+    // &#127916; &#127910; &#128064;
+    auto message = "&#8505; " + timestamp + ",\n" + free_space + " MB " + translation::messages::kAvailable + ",\n" +
+           GetUptime() + " " + translation::messages::kUptime;
+
+    UpdatePausedUsers();
+    if (auto it = paused_users_.find(requested_by); it != paused_users_.end()) {
+        message += std::string{",\n"} + translation::messages::kNotificationsPaused + " " + GetDateTimeString(it->second);
+    }
+
+    return message;
+}
+
 void BotFacade::ProcessOnDemandCmd(uint64_t user_id) {
     std::lock_guard lock(photo_mutex_);
     users_waiting_for_photo_.insert(user_id);
 }
 
-void BotFacade::ProcessPingCmd(uint64_t user_id) {
-    PostTextMessage(PrepareStatusInfo(storage_path_), user_id);
+void BotFacade::ProcessStatusCmd(uint64_t user_id) {
+    PostStatusMessage(PrepareStatusInfo(user_id), user_id);
 }
 
 void BotFacade::ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter) {
@@ -280,6 +319,17 @@ void BotFacade::ProcessLogCmd(uint64_t user_id) {
     PostTextMessage(message, user_id);
 }
 
+void BotFacade::ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_time) {
+    const auto end_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now() + pause_time};
+    PostTextMessage(translation::messages::kNotificationsPaused + " " + GetDateTimeString(end_time), user_id);
+    paused_users_[user_id] = end_time;
+}
+
+void BotFacade::ProcessResumeCmd(uint64_t user_id) {
+    RemoveUserFromPaused(user_id);
+    PostTextMessage(translation::messages::kNotificationsResumed, user_id);
+}
+
 bool BotFacade::IsUserAllowed(uint64_t user_id) const {
     const auto it = std::find(cbegin(allowed_users_), cend(allowed_users_), user_id);
     if (it == cend(allowed_users_)) {
@@ -302,6 +352,8 @@ void BotFacade::PostOnDemandPhoto(const std::filesystem::path& file_path) {
             std::swap(recipients, users_waiting_for_photo_);
         }
 
+        // Do not filter users here: users explicitly request this image
+
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::OnDemandPhoto{std::move(recipients), file_path});
     }
@@ -309,16 +361,27 @@ void BotFacade::PostOnDemandPhoto(const std::filesystem::path& file_path) {
 }
 
 void BotFacade::PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
+    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(allowed_users_);
     {
         std::lock_guard lock(queue_mutex_);
-        messages_queue_.push_back(telegram::messages::AlarmPhoto{allowed_users_, file_path, classes_detected});
+        messages_queue_.push_back(telegram::messages::AlarmPhoto{std::move(recipients), file_path, classes_detected});
+    }
+    queue_cv_.notify_one();
+}
+
+void BotFacade::PostStatusMessage(const std::string& message, uint64_t user_id) {
+    // Explicit message - do not check
+    std::set<uint64_t> recipients = std::set<uint64_t>{user_id};
+    {
+        std::lock_guard lock(queue_mutex_);
+        messages_queue_.push_back(telegram::messages::TextMessage{std::move(recipients), message});
     }
     queue_cv_.notify_one();
 }
 
 void BotFacade::PostTextMessage(const std::string& message, const std::optional<uint64_t>& user_id) {
+    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
     {
-        std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::TextMessage{std::move(recipients), message});
     }
@@ -326,8 +389,8 @@ void BotFacade::PostTextMessage(const std::string& message, const std::optional<
 }
 
 void BotFacade::PostVideoPreview(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id) {
+    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
     {
-        std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Preview{std::move(recipients), file_path});
     }
@@ -335,8 +398,8 @@ void BotFacade::PostVideoPreview(const std::filesystem::path& file_path, const s
 }
 
 void BotFacade::PostVideo(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id) {
+    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
     {
-        std::set<uint64_t> recipients = (user_id ? std::set<uint64_t>{*user_id} : allowed_users_);
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Video{std::move(recipients), file_path});
     }
@@ -344,6 +407,7 @@ void BotFacade::PostVideo(const std::filesystem::path& file_path, const std::opt
 }
 
 void BotFacade::PostMenu(uint64_t user_id) {
+    // Do not check for paused user
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Menu{user_id});
@@ -352,11 +416,42 @@ void BotFacade::PostMenu(uint64_t user_id) {
 }
 
 void BotFacade::PostAnswerCallback(const std::string& callback_id) {
+    // Do not check for paused user
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Answer{callback_id});
     }
     queue_cv_.notify_one();
+}
+
+void BotFacade::UpdatePausedUsers() {
+    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()}.get_local_time();
+    std::erase_if(paused_users_, [&cur_time](const auto& p) {
+        return p.second.get_local_time() <= cur_time;
+    });
+}
+
+void BotFacade::RemoveUserFromPaused(uint64_t user_id) {
+    std::erase_if(paused_users_, [user_id](const auto& p) {
+        return p.first == user_id;
+    });
+}
+
+std::set<uint64_t> BotFacade::UpdateAndRemovePausedUsers(const std::set<uint64_t>& users, std::optional<uint64_t> requester/* = std::nullopt*/) {
+    // TODO: consider add some delay, to update maps less often to be easier on resources
+    UpdatePausedUsers();
+
+    auto res = users;
+    for (const auto& p : paused_users_) {
+        if (auto it = res.find(p.first); it != res.end()) {
+            res.erase(it);
+        }
+    }
+
+    if (requester) { // Explicitly requested
+        res.insert(*requester);
+    }
+    return res;
 }
 
 void BotFacade::PollThreadFunc(std::stop_token stop_token) {

@@ -16,6 +16,8 @@ inline const auto kVideo = std::string("video");
 inline const auto kImage = std::string("image");
 inline const auto kPing = std::string("ping");
 inline const auto kLog = std::string("log");
+inline const auto kPause = std::string("pause");
+inline const auto kResume = std::string("resume");
 
 inline std::string VideoCmdPrefix() {
     auto video_prefix = "/" + kVideo + "_";

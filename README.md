@@ -33,8 +33,12 @@ The application is written using C++, so it can be compiled on any supported pla
 - `/video_<id>` - get video with `<id>`
 - `/ping` - check app is up and running - report current time and free disk space
 - `/log` - get log tail, useful to check what's going on
+- `/pause` - pause notifications for certain period of time
+- `/resume` - resume notifications
 
 List of videos (and previews) can be filtered by time depth. For example, use `/videos 30m` to get list of videos recorded for last 30 minutes. Supported suffixes are: `m` (minutes), `h` (hours) and `d` (days).
+
+Pause notifications command pauses notifications only. As far as application is multi-user, all processing still works and other users notifications will be intact. `/pause` command works with time periods similar to videos and previews, e. g. `/pause 1h`, `/pause 30m` etc. Default pause time is 1 hour.
 
 ## Installation
 1. Download latest package from the "Releases" section (or compile from sources) - Windows packages are available, linux compilation is rather simple and described in Compilation section
