@@ -48,6 +48,19 @@ TgBot::InlineKeyboardMarkup::Ptr MakeStartMenu() {
     {
         std::vector<TgBot::InlineKeyboardButton::Ptr> row;
         row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kPause + " 1" + kHour;
+        row.back()->callbackData = "/" + telegram::commands::kPause + " 1h";
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kPause + " 12" + kHour;
+        row.back()->callbackData = "/" + telegram::commands::kPause + " 12h";
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kResume;
+        row.back()->callbackData = "/" + telegram::commands::kResume;
+        keyboard->inlineKeyboard.push_back(std::move(row));
+    }
+    {
+        std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+        row.emplace_back(new TgBot::InlineKeyboardButton());
         row.back()->text = kImage;
         row.back()->callbackData = "/" + telegram::commands::kImage;
         row.emplace_back(new TgBot::InlineKeyboardButton());
