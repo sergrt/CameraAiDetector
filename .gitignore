@@ -34,7 +34,7 @@
 # Build dir
 build/
 
-#gtest
+# gtest
 gtest/
 
 3rdparty/**/build/
@@ -42,3 +42,13 @@ gtest/
 cmake-*/
 latest/
 release/
+
+# WIndows - related 3rd-party
+3rdparty/boost/
+3rdparty/cudnn-windows-*/
+3rdparty/curl/
+3rdparty/opencv/
+3rdparty/opencv_contrib/
+3rdparty/openssl/
+3rdparty/zlib/
+
