@@ -26,4 +26,5 @@ private:
     InstrumentCall instrument_detect_impl_;
     cv::Mat prev_frame_;
     bool triggered_{false};
+    const bool use_trigger_frame_{true}; // Ensure motion is real by skipping first frame (it just might be corrupted)
 };

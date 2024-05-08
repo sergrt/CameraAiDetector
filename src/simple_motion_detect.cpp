@@ -5,13 +5,12 @@
 #include <limits>
 #include <vector>
 
-constexpr bool kUseTrigger = true;
-
 SimpleMotionDetect::SimpleMotionDetect(const Settings::MotionDetectSettings& settings)
     : gaussian_sz_(cv::Size(settings.gaussian_blur_sz, settings.gaussian_blur_sz))
     , threshold_(settings.threshold)
     , area_trigger_(settings.area_trigger)
     , instrument_detect_impl_("Simple motion", 100)
+    , use_trigger_frame_(settings.use_trigger_frame)
 {
 }
 
@@ -36,7 +35,7 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-    if (kUseTrigger) {
+    if (use_trigger_frame_) {
         // Skip first frame in case frame is corrupted
         const bool already_triggered = triggered_;
         triggered_ = !contours.empty();

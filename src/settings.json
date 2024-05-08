@@ -14,7 +14,8 @@
     "motion_detect_settings": {
         "gaussian_blur_sz": 21,
         "threshold": 15,
-        "area_trigger": 150
+        "area_trigger": 150,
+        "use_trigger_frame": true
     },
     "hybrid_detect_settings": {
         "min_ai_call_interval_ms": 0,

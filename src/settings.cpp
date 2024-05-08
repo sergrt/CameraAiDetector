@@ -66,6 +66,7 @@ Settings LoadSettings(const std::string& settings_file_name) {
             motion_detect_settings.at("gaussian_blur_sz"),
             motion_detect_settings.at("threshold"),
             motion_detect_settings.at("area_trigger"),
+            motion_detect_settings.at("use_trigger_frame")
         };
     }
 

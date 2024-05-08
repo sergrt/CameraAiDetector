@@ -30,6 +30,7 @@ struct Settings {
         int gaussian_blur_sz{20};
         int threshold{15};
         int area_trigger{150};
+        bool use_trigger_frame{true};
     };
     struct HybridDetectSettings {
         std::chrono::milliseconds min_ai_call_interval{std::chrono::milliseconds(1000)};
@@ -50,8 +51,8 @@ struct Settings {
     std::string codeproject_ai_url{"http://localhost:32168/v1/vision/custom/ipcam-general"};
     std::string onnx_file_path{"yolov5s.onnx"};
     float min_confidence{0.4};  // The minimum confidence level for an object will be detected. In the range 0.0 to 1.0
-    MotionDetectSettings motion_detect_settings;
-    HybridDetectSettings hybrid_detect_settings;
+    MotionDetectSettings motion_detect_settings{};
+    HybridDetectSettings hybrid_detect_settings{};
     int nth_detect_frame{10};  // Perform detect on every nth frame
     bool use_image_scale{true};  // Use image scale
     double img_scale_x{0.5};  // Scale factor before sending to AI
