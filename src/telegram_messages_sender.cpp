@@ -87,7 +87,7 @@ MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_pa
 void MessagesSender::operator()(const telegram::messages::TextMessage& message) {
     for (const auto& user : message.recipients) {
         try {
-            if (!bot_->getApi().sendMessage(user, message.text, false, 0, nullptr, "HTML"))
+            if (!bot_->getApi().sendMessage(user, message.text, nullptr, nullptr, nullptr, "HTML"))
                 LOG_ERROR << "Message send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending message", e);
@@ -198,7 +198,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
 
 void MessagesSender::operator()(const telegram::messages::Menu& message) {
     try {
-        if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, false, 0, start_menu_, "HTML"))
+        if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, nullptr, nullptr, start_menu_, "HTML"))
             LOG_ERROR << "/start reply send failed to user " << message.recipient;
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while sending menu", e);
