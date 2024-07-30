@@ -25,7 +25,7 @@ bool HybridObjectDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
     if (need_ai_proof_ && (check_frame || std::chrono::steady_clock::now() - prev_ai_call_ >= min_ai_call_interval_)) {
         detect_res = ai_->Detect(image, detections);
         prev_ai_call_ = std::chrono::steady_clock::now();
-        LogDebug() << "AI call for object proof: res = " << detect_res << ", detections.size() = " << detections.size();
+        LogDebug() << "AI call for object proof: " << LOG_VAR(detect_res) << ", " << LOG_VAR(detections.size());
         need_ai_proof_ = !(detect_res && !detections.empty());
     }
 

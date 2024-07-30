@@ -43,7 +43,7 @@ public:
     }
 
 private:
-    std::ostream* stream_;
+    std::ostream* stream_{};
     std::string string_;
 };
 
@@ -90,7 +90,7 @@ private:
     void WriteLevel();
 
     StreamWrapper stream_;
-    const LogLevel log_level_;
+    const LogLevel log_level_{};
     bool something_written_ = false;
 };
 
@@ -143,3 +143,17 @@ private:
     bool use_counter_ = true;
     std::chrono::time_point<std::chrono::steady_clock> begin_time_ = std::chrono::steady_clock::now();
 };
+
+// For systems with __PRETTY_FUNCTION__ it is possible to use nice funtion names in logs
+/*
+inline std::string GetFunctionName(const std::string& prettyFunction){
+    size_t colons = prettyFunction.find("::");
+    size_t begin = prettyFunction.substr(0,colons).rfind(" ") + 1;
+    return prettyFunction.substr(begin);
+}
+
+#define __FULL_FUNCTION_NAME__ GetFunctionName(__PRETTY_FUNCTION__)
+#define LOCATION __FULL_FUNCTION_NAME__ << ":" << __LINE__ << ": "
+*/
+
+#define LOG_VAR(x) #x << " = " << x
