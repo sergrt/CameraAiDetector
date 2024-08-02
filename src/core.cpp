@@ -11,7 +11,7 @@ constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);
 Core::Core(Settings settings)
     : settings_(std::move(settings))
     , frame_reader_(settings_.source)
-    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users)
+    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users, settings_.admin_users)
     , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
     , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
 

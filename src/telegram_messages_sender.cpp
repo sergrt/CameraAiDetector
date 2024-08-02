@@ -71,12 +71,44 @@ TgBot::InlineKeyboardMarkup::Ptr MakeStartMenu() {
     return keyboard;
 }
 
+TgBot::InlineKeyboardMarkup::Ptr MakeAdminStartMenu() {
+    using namespace translation::menu;
+
+    auto keyboard = MakeStartMenu();
+    {
+        std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kSleep + " 5" + kMinute;
+        row.back()->callbackData = "/" + telegram::commands::kSleep + " 5m";
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kSleep + " 30" + kMinute;
+        row.back()->callbackData = "/" + telegram::commands::kSleep + " 30m";
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kSleep + " 4" + kHour;
+        row.back()->callbackData = "/" + telegram::commands::kSleep + " 4h";
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kWakeup;
+        row.back()->callbackData = "/" + telegram::commands::kWakeup;
+        keyboard->inlineKeyboard.push_back(std::move(row));
+    }
+    {
+        std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+        row.emplace_back(new TgBot::InlineKeyboardButton());
+        row.back()->text = kLog;
+        row.back()->callbackData = "/" + telegram::commands::kLog;
+        keyboard->inlineKeyboard.push_back(std::move(row));
+    }
+}
+
 }  // namespace
 
 namespace telegram {
 
 MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_path)
-    : bot_{bot}, storage_path_{std::move(storage_path)}, start_menu_{MakeStartMenu()} {
+    : bot_{bot}
+    , storage_path_{std::move(storage_path)}
+    , start_menu_{MakeStartMenu()}
+    , admin_start_menu_{MakeAdminStartMenu()} {
     if (!bot_) {
         static const auto err_msg = "Invalid tg bot dependency";
         LOG_ERROR << err_msg;
@@ -202,6 +234,15 @@ void MessagesSender::operator()(const telegram::messages::Menu& message) {
             LOG_ERROR << "/start reply send failed to user " << message.recipient;
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while sending menu", e);
+    }
+}
+
+void MessagesSender::operator()(const telegram::messages::AdminMenu& message) {
+    try {
+        if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, nullptr, nullptr, admin_start_menu_, "HTML"))
+            LOG_ERROR << "/start reply send failed to user " << message.recipient;
+    } catch (std::exception& e) {
+        LOG_EXCEPTION("Exception while sending admin menu", e);
     }
 }
 

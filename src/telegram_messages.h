@@ -18,6 +18,8 @@ inline const auto kPing = std::string("ping");
 inline const auto kLog = std::string("log");
 inline const auto kPause = std::string("pause");
 inline const auto kResume = std::string("resume");
+inline const auto kSleep = std::string("sleep");
+inline const auto kWakeup = std::string("wakeup");
 
 inline std::string VideoCmdPrefix() {
     auto video_prefix = "/" + kVideo + "_";
@@ -57,6 +59,10 @@ struct Menu {
     uint64_t recipient{};
 };
 
+struct AdminMenu {
+    uint64_t recipient{};
+};
+
 struct Answer {
     std::string callback_id;
 };
@@ -70,6 +76,7 @@ using Message = std::variant<
     telegram::messages::Preview,
     telegram::messages::Video,
     telegram::messages::Menu,
+    telegram::messages::AdminMenu,
     telegram::messages::Answer>;
 
 }  // namespace telegram
