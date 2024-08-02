@@ -98,6 +98,7 @@ TgBot::InlineKeyboardMarkup::Ptr MakeAdminStartMenu() {
         row.back()->callbackData = "/" + telegram::commands::kLog;
         keyboard->inlineKeyboard.push_back(std::move(row));
     }
+    return keyboard;
 }
 
 }  // namespace
