@@ -57,6 +57,10 @@ struct Menu {
     uint64_t recipient{};
 };
 
+struct AdminMenu {
+    uint64_t recipient{};
+};
+
 struct Answer {
     std::string callback_id;
 };
@@ -70,6 +74,7 @@ using Message = std::variant<
     telegram::messages::Preview,
     telegram::messages::Video,
     telegram::messages::Menu,
+    telegram::messages::AdminMenu,
     telegram::messages::Answer>;
 
 }  // namespace telegram

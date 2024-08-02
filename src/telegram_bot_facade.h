@@ -23,7 +23,7 @@ struct Filter {
 
 class BotFacade final {
 public:
-    BotFacade(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users);
+    BotFacade(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users, std::set<uint64_t> admin_users);
     ~BotFacade();
 
     BotFacade(const BotFacade&) = delete;
@@ -42,6 +42,7 @@ public:
     void PostVideoPreview(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostVideo(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id = std::nullopt);
     void PostMenu(uint64_t user_id);
+    void PostAdminMenu(uint64_t user_id);
     void PostAnswerCallback(const std::string& callback_id);
 
     bool SomeoneIsWaitingForPhoto() const;
@@ -51,6 +52,7 @@ private:
 
     void SetupBotCommands();
     bool IsUserAllowed(uint64_t user_id) const;
+    bool IsUserAdmin(uint64_t user_id) const;
 
     void PollThreadFunc(std::stop_token stop_token);
     void QueueThreadFunc(std::stop_token stop_token);
@@ -59,7 +61,7 @@ private:
     void ProcessStatusCmd(uint64_t user_id);
     void ProcessVideosCmd(uint64_t user_id, const std::optional<Filter>& filter);
     void ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>& filter);
-    void ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_min);
+    void ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_time);
     void ProcessResumeCmd(uint64_t user_id);
     void ProcessVideoCmd(uint64_t user_id, const std::string& video_uid);
     void ProcessLogCmd(uint64_t user_id);
@@ -67,12 +69,13 @@ private:
     std::string PrepareStatusInfo(uint64_t requested_by);
     void UpdatePausedUsers();
     void RemoveUserFromPaused(uint64_t user_id);
-    std::set<uint64_t> UpdateAndRemovePausedUsers(const std::set<uint64_t>& users, std::optional<uint64_t> requester = std::nullopt);
+    std::set<uint64_t> UpdateGetUnpausedRecipients(const std::set<uint64_t>& users, std::optional<uint64_t> requester = std::nullopt);
 
     std::unique_ptr<TgBot::Bot> bot_;
     MessagesSender message_sender_;
     std::filesystem::path storage_path_;
     std::set<uint64_t> allowed_users_;
+    std::set<uint64_t> admin_users_;
 
     std::jthread poll_thread_;
 

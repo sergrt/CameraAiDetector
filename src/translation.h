@@ -28,6 +28,7 @@ static const std::string kImage = "Instant image";
 static const std::string kPing = "Status";
 static const std::string kPause = "Pause";
 static const std::string kResume = "Resume";
+static const std::string kLog = "Log";
 #endif
 
 }  // namespace menu
@@ -54,6 +55,7 @@ static const std::string kAppStarted = "App started";
 static const std::string kUptime = "uptime";
 static const std::string kNotificationsPaused = "Notifications paused till";
 static const std::string kNotificationsResumed = "Resume notifications";
+
 #endif
 
 }  // namespace messages

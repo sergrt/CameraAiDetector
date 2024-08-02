@@ -103,11 +103,12 @@ std::chrono::system_clock::time_point GetDateTime(TgBot::Message::Ptr message) {
 
 }  // namespace
 
-BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users)
-    : bot_{std::make_unique<TgBot::Bot>(token)},
-      message_sender_{bot_.get(), storage_path},
-      storage_path_{std::move(storage_path)},
-      allowed_users_{std::move(allowed_users)} {
+BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users, std::set<uint64_t> admin_users)
+    : bot_{std::make_unique<TgBot::Bot>(token)}
+    , message_sender_{bot_.get(), storage_path}
+    , storage_path_{std::move(storage_path)}
+    , allowed_users_{std::move(allowed_users)}
+    , admin_users_{std::move(admin_users)} {
 
     SetupBotCommands();
 }
@@ -115,7 +116,10 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
 void BotFacade::SetupBotCommands() {
     bot_->getEvents().onCommand(telegram::commands::kStart, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kStart << " from user " << message->chat->id;
-        if (const auto id = message->chat->id; IsUserAllowed(id)) {
+        const auto id = message->chat->id;
+        if (IsUserAdmin(id)) {
+            PostAdminMenu(id);
+        } else if (IsUserAllowed(id)) {
             PostMenu(id);
         }
     });
@@ -147,17 +151,17 @@ void BotFacade::SetupBotCommands() {
     });
     bot_->getEvents().onCommand(telegram::commands::kLog, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kLog << " from user " << message->chat->id;
-        if (const auto id = message->chat->id; IsUserAllowed(id)) {
+        if (const auto id = message->chat->id; IsUserAdmin(id)) {
             ProcessLogCmd(id);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kPause, [this](TgBot::Message::Ptr message) {
         LogInfo() << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
-            auto pause_min = GetParameterTimeMin(message->text);
-            if (!pause_min)
-                *pause_min = kDefaultPauseTime;
-            ProcessPauseCmd(id, *pause_min);
+            auto pause_time = GetParameterTimeMin(message->text);
+            if (!pause_time)
+                *pause_time = kDefaultPauseTime;
+            ProcessPauseCmd(id, *pause_time);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kResume, [this](TgBot::Message::Ptr message) {
@@ -202,6 +206,7 @@ void BotFacade::SetupBotCommands() {
                 ProcessStatusCmd(id);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, telegram::commands::kPause)) {
+                //TODO: Pause and Resume commands use the same code as bot commands, consider to refactor
                 auto pause_min = GetParameterTimeMin(command.substr(telegram::commands::kPause.size()));
                 if (!pause_min)
                     *pause_min = kDefaultPauseTime;
@@ -209,6 +214,9 @@ void BotFacade::SetupBotCommands() {
                  PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, telegram::commands::kResume)) {
                 ProcessResumeCmd(id);
+                PostAnswerCallback(query->id);
+            } else if (StringTools::startsWith(command, telegram::commands::kLog)) {
+                ProcessLogCmd(id);
                 PostAnswerCallback(query->id);
             }
         }
@@ -339,6 +347,15 @@ bool BotFacade::IsUserAllowed(uint64_t user_id) const {
     return true;
 }
 
+bool BotFacade::IsUserAdmin(uint64_t user_id) const {
+    const auto it = std::find(cbegin(admin_users_), cend(admin_users_), user_id);
+    if (it == cend(admin_users_)) {
+        LogWarning() << "Unauthorized admin user access: " << user_id;
+        return false;
+    }
+    return true;
+}
+
 bool BotFacade::SomeoneIsWaitingForPhoto() const {
     std::lock_guard lock(photo_mutex_);
     return !users_waiting_for_photo_.empty();
@@ -361,7 +378,10 @@ void BotFacade::PostOnDemandPhoto(const std::filesystem::path& file_path) {
 }
 
 void BotFacade::PostAlarmPhoto(const std::filesystem::path& file_path, const std::string& classes_detected) {
-    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(allowed_users_);
+    std::set<uint64_t> recipients = UpdateGetUnpausedRecipients(allowed_users_);
+    if (recipients.empty())
+        return;
+
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::AlarmPhoto{std::move(recipients), file_path, classes_detected});
@@ -380,7 +400,10 @@ void BotFacade::PostStatusMessage(const std::string& message, uint64_t user_id) 
 }
 
 void BotFacade::PostTextMessage(const std::string& message, const std::optional<uint64_t>& user_id) {
-    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    std::set<uint64_t> recipients = UpdateGetUnpausedRecipients(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    if (recipients.empty())
+        return;
+
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::TextMessage{std::move(recipients), message});
@@ -389,7 +412,10 @@ void BotFacade::PostTextMessage(const std::string& message, const std::optional<
 }
 
 void BotFacade::PostVideoPreview(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id) {
-    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    std::set<uint64_t> recipients = UpdateGetUnpausedRecipients(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    if (recipients.empty())
+        return;
+
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Preview{std::move(recipients), file_path});
@@ -398,7 +424,10 @@ void BotFacade::PostVideoPreview(const std::filesystem::path& file_path, const s
 }
 
 void BotFacade::PostVideo(const std::filesystem::path& file_path, const std::optional<uint64_t>& user_id) {
-    std::set<uint64_t> recipients = UpdateAndRemovePausedUsers(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    std::set<uint64_t> recipients = UpdateGetUnpausedRecipients(user_id ? std::set<uint64_t>{*user_id} : allowed_users_, user_id);
+    if (recipients.empty())
+        return;
+
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Video{std::move(recipients), file_path});
@@ -411,6 +440,15 @@ void BotFacade::PostMenu(uint64_t user_id) {
     {
         std::lock_guard lock(queue_mutex_);
         messages_queue_.push_back(telegram::messages::Menu{user_id});
+    }
+    queue_cv_.notify_one();
+}
+
+void BotFacade::PostAdminMenu(uint64_t user_id) {
+    // Do not check for paused user
+    {
+        std::lock_guard lock(queue_mutex_);
+        messages_queue_.push_back(telegram::messages::AdminMenu{user_id});
     }
     queue_cv_.notify_one();
 }
@@ -437,7 +475,7 @@ void BotFacade::RemoveUserFromPaused(uint64_t user_id) {
     });
 }
 
-std::set<uint64_t> BotFacade::UpdateAndRemovePausedUsers(const std::set<uint64_t>& users, std::optional<uint64_t> requester/* = std::nullopt*/) {
+std::set<uint64_t> BotFacade::UpdateGetUnpausedRecipients(const std::set<uint64_t>& users, std::optional<uint64_t> requester/* = std::nullopt*/) {
     // TODO: consider add some delay, to update maps less often to be easier on resources
     UpdatePausedUsers();
 
