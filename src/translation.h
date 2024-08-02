@@ -21,7 +21,6 @@ static const std::string kResume = "\xD0\x92\xD0\xBE\xD0\xB7\xD0\xBE\xD0\xB1\xD0
 #else
 static const std::string kCaption = "&#9995; Start here";
 static const std::string kViews = "Views";
-static const std::string kMinute = "m";
 static const std::string kHour = "h";
 static const std::string kAll = "all";
 static const std::string kVideos = "Videos";
@@ -29,8 +28,6 @@ static const std::string kImage = "Instant image";
 static const std::string kPing = "Status";
 static const std::string kPause = "Pause";
 static const std::string kResume = "Resume";
-static const std::string kSleep = "Sleep";
-static const std::string kWakeup = "Wakeup";
 static const std::string kLog = "Log";
 #endif
 
@@ -58,8 +55,6 @@ static const std::string kAppStarted = "App started";
 static const std::string kUptime = "uptime";
 static const std::string kNotificationsPaused = "Notifications paused till";
 static const std::string kNotificationsResumed = "Resume notifications";
-static const std::string kEnteredSleepState = "Entered sleep state";
-static const std::string kLeftSleepState = "Left sleep state";
 
 #endif
 

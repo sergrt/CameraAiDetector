@@ -78,22 +78,6 @@ TgBot::InlineKeyboardMarkup::Ptr MakeAdminStartMenu() {
     {
         std::vector<TgBot::InlineKeyboardButton::Ptr> row;
         row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = kSleep + " 5" + kMinute;
-        row.back()->callbackData = "/" + telegram::commands::kSleep + " 5m";
-        row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = kSleep + " 30" + kMinute;
-        row.back()->callbackData = "/" + telegram::commands::kSleep + " 30m";
-        row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = kSleep + " 4" + kHour;
-        row.back()->callbackData = "/" + telegram::commands::kSleep + " 4h";
-        row.emplace_back(new TgBot::InlineKeyboardButton());
-        row.back()->text = kWakeup;
-        row.back()->callbackData = "/" + telegram::commands::kWakeup;
-        keyboard->inlineKeyboard.push_back(std::move(row));
-    }
-    {
-        std::vector<TgBot::InlineKeyboardButton::Ptr> row;
-        row.emplace_back(new TgBot::InlineKeyboardButton());
         row.back()->text = kLog;
         row.back()->callbackData = "/" + telegram::commands::kLog;
         keyboard->inlineKeyboard.push_back(std::move(row));

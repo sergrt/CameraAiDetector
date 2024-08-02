@@ -16,7 +16,6 @@
 
 constexpr size_t kMaxMessageLen{4096};
 constexpr std::chrono::minutes kDefaultPauseTime{60};
-constexpr std::chrono::minutes kDefaultSleepTime{60};
 
 extern SafePtr<RingBuffer<std::string>> AppLogTail;
 extern std::chrono::time_point<std::chrono::steady_clock> kStartTime;
@@ -171,21 +170,6 @@ void BotFacade::SetupBotCommands() {
             ProcessResumeCmd(id);
         }
     });
-    bot_->getEvents().onCommand(telegram::commands::kSleep, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kSleep << " from user " << message->chat->id;
-        if (const auto id = message->chat->id; IsUserAdmin(id)) {
-            auto sleep_time = GetParameterTimeMin(message->text);
-            if (!sleep_time)
-                *sleep_time = kDefaultSleepTime;
-            ProcessSleepCmd(id, *sleep_time);
-        }
-    });
-    bot_->getEvents().onCommand(telegram::commands::kWakeup, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kWakeup << " from user " << message->chat->id;
-        if (const auto id = message->chat->id; IsUserAdmin(id)) {
-            ProcessWakeupCmd(id);
-        }
-    });
     bot_->getEvents().onAnyMessage([this](TgBot::Message::Ptr message) {
         LogInfo() << "Received message " << message->text << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
@@ -222,7 +206,7 @@ void BotFacade::SetupBotCommands() {
                 ProcessStatusCmd(id);
                 PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, telegram::commands::kPause)) {
-                //TODO: Pause and Sleep commands use the same code as bot commands, consider to refactor
+                //TODO: Pause and Resume commands use the same code as bot commands, consider to refactor
                 auto pause_min = GetParameterTimeMin(command.substr(telegram::commands::kPause.size()));
                 if (!pause_min)
                     *pause_min = kDefaultPauseTime;
@@ -231,14 +215,8 @@ void BotFacade::SetupBotCommands() {
             } else if (StringTools::startsWith(command, telegram::commands::kResume)) {
                 ProcessResumeCmd(id);
                 PostAnswerCallback(query->id);
-            } else if (StringTools::startsWith(command, telegram::commands::kSleep)) {
-                auto sleep_min = GetParameterTimeMin(command.substr(telegram::commands::kPause.size()));
-                if (!sleep_min)
-                    *sleep_min = kDefaultSleepTime;
-                 ProcessSleepCmd(id, *sleep_min);
-                 PostAnswerCallback(query->id);
-            } else if (StringTools::startsWith(command, telegram::commands::kWakeup)) {
-                ProcessWakeupCmd(id);
+            } else if (StringTools::startsWith(command, telegram::commands::kLog)) {
+                ProcessLogCmd(id);
                 PostAnswerCallback(query->id);
             }
         }
@@ -358,17 +336,6 @@ void BotFacade::ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_tim
 void BotFacade::ProcessResumeCmd(uint64_t user_id) {
     RemoveUserFromPaused(user_id);
     PostTextMessage(translation::messages::kNotificationsResumed, user_id);
-}
-
-void BotFacade::ProcessSleepCmd(uint64_t user_id, std::chrono::minutes sleep_time) {
-    const auto end_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now() + sleep_time};
-    PostTextMessage(translation::messages::kEnteredSleepState + " " + GetDateTimeString(end_time), user_id);
-    sleep_state_ = {true, end_time};
-}
-
-void BotFacade::ProcessWakeupCmd(uint64_t user_id) {
-    sleep_state_ = {false, {}};
-    PostTextMessage(translation::messages::kLeftSleepState, user_id);
 }
 
 bool BotFacade::IsUserAllowed(uint64_t user_id) const {
@@ -508,22 +475,9 @@ void BotFacade::RemoveUserFromPaused(uint64_t user_id) {
     });
 }
 
-void BotFacade::UpdateSleepState() {
-    if (!sleep_state_.is_enabled)
-        return;
-
-    const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()}.get_local_time();
-    sleep_state_.is_enabled = sleep_state_.end_time.get_local_time() > cur_time;
-}
-
 std::set<uint64_t> BotFacade::UpdateGetUnpausedRecipients(const std::set<uint64_t>& users, std::optional<uint64_t> requester/* = std::nullopt*/) {
     // TODO: consider add some delay, to update maps less often to be easier on resources
     UpdatePausedUsers();
-    UpdateSleepState();
-    if (sleep_state_.is_enabled)
-    {
-        return requester ? std::set<uint64_t>{*requester} : std::set<uint64_t>{};
-    }
 
     auto res = users;
     for (const auto& p : paused_users_) {

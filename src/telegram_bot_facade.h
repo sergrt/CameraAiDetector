@@ -65,12 +65,9 @@ private:
     void ProcessResumeCmd(uint64_t user_id);
     void ProcessVideoCmd(uint64_t user_id, const std::string& video_uid);
     void ProcessLogCmd(uint64_t user_id);
-    void ProcessSleepCmd(uint64_t user_id, std::chrono::minutes sleep_time);
-    void ProcessWakeupCmd(uint64_t user_id);
 
     std::string PrepareStatusInfo(uint64_t requested_by);
     void UpdatePausedUsers();
-    void UpdateSleepState();
     void RemoveUserFromPaused(uint64_t user_id);
     std::set<uint64_t> UpdateGetUnpausedRecipients(const std::set<uint64_t>& users, std::optional<uint64_t> requester = std::nullopt);
 
@@ -87,11 +84,6 @@ private:
 
     std::deque<Message> messages_queue_;
     std::unordered_map<uint64_t, std::chrono::zoned_time<std::chrono::system_clock::duration>> paused_users_;
-    struct SleepState {
-        bool is_enabled = false;
-        std::chrono::zoned_time<std::chrono::system_clock::duration> end_time;
-    };
-    SleepState sleep_state_{};
     std::jthread queue_thread_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;

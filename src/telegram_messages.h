@@ -18,8 +18,6 @@ inline const auto kPing = std::string("ping");
 inline const auto kLog = std::string("log");
 inline const auto kPause = std::string("pause");
 inline const auto kResume = std::string("resume");
-inline const auto kSleep = std::string("sleep");
-inline const auto kWakeup = std::string("wakeup");
 
 inline std::string VideoCmdPrefix() {
     auto video_prefix = "/" + kVideo + "_";
