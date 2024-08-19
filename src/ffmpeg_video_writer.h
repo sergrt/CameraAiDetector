@@ -6,6 +6,10 @@
 
 #include <opencv2/opencv.hpp>
 
+#ifdef _WINDOWS
+#include <windows.h>
+#endif
+
 #include <string>
 
 class FfmpegVideoWriter : public VideoWriter {
@@ -17,7 +21,14 @@ public:
     void Stop() override;
 
 private:
+    std::string source_{};
     std::string file_name_{};
-    pid_t ffmpeg_pid_{};
+    std::string ffmpeg_path_{};
     std::string output_resolution_{"1920x1080"};
+
+#ifdef _WINDOWS
+    DWORD ffmpeg_pid_{};
+#else
+    pid_t ffmpeg_pid_{};
+#endif
 };
