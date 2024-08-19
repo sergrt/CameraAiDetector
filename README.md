@@ -77,7 +77,7 @@ OpenCV DNN, CodeProject AI or Simple motion detection can be used to analyze vid
 - Compiling OpenCV with CUDA support is _really_ slow
 
 ## Video writer notes
-By default application uses OpenCV video writer. It's good enough, but does not record audio. It is possible to switch to `ffmpeg` video writer. It requires ffmpeg executable, and some configuration options:
+By default application uses OpenCV video writer. It's good enough, but does not record audio. To address this issue it is possible to switch to ffmpeg video writer. It requires ffmpeg executable, and some configuration options:
 - `use_ffmpeg_writer` - set `true` to use `ffmpeg`
 - `ffmpeg_path` - point to where `ffmpeg` is located, e. g. `/usr/bin`
 
