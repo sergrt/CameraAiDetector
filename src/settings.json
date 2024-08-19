@@ -33,6 +33,7 @@
     },
     "frame_width_px": 1,
     "use_ffmpeg_writer": false,
+    "ffmpeg_path": "/usr/bin",
     "use_video_scale": false,
     "video_width": 1024,
     "video_height": 576,

@@ -24,6 +24,7 @@ private:
     std::string source_{};
     std::string file_name_{};
     std::string ffmpeg_path_{};
+    bool use_scale_{false};
     std::string output_resolution_{"1920x1080"};
 
 #ifdef _WINDOWS
