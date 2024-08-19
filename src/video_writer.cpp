@@ -3,11 +3,11 @@
 #include "log.h"
 #include "uid_utils.h"
 
-#include <stdexcept>
+#include <string>
 
 constexpr size_t kInitialBufferSize = 120;  // Some reasonable value to fit frames without reallocate too often
 constexpr size_t kPreviewImages = 9;  // 3x3 grid. Should be square number
-constexpr auto kVideoFilePrefix = "v_";
+const std::string VideoWriter::kVideoFilePrefix = "v_";
 
 std::string VideoWriter::kVideoCodec = "avc1";
 std::string VideoWriter::kVideoFileExtension = ".mp4";
@@ -22,30 +22,6 @@ cv::Mat CreateEmptyPreview() {
 
 }  // namespace
 
-VideoWriter::VideoWriter(const Settings& settings, const StreamProperties& in_properties, const StreamProperties& out_properties)
-    : use_scale_(in_properties != out_properties)
-    , scale_height_(out_properties.height / static_cast<float>(in_properties.height))
-    , scale_width_(out_properties.width / static_cast<float>(in_properties.width))
-    , scale_algorithm_(scale_width_ < 1.0 ? cv::INTER_AREA : cv::INTER_LANCZOS4)
-    , preview_sampling_interval_(settings.preview_sampling_interval_ms) {
-    const auto file_name = GenerateFileName(kVideoFilePrefix, &uid_) + kVideoFileExtension;
-    if (kVideoCodec.size() != 4) {
-        const auto msg = "Invalid codec specified: " + kVideoCodec;
-        LOG_ERROR << msg;
-        throw std::runtime_error(msg);
-    }
-
-    const auto four_cc = cv::VideoWriter::fourcc(kVideoCodec[0], kVideoCodec[1], kVideoCodec[2], kVideoCodec[3]);
-    if (!writer_.open((settings.storage_path / file_name).generic_string(), four_cc, out_properties.fps, cv::Size(out_properties.width, out_properties.height))) {
-        const auto msg = "Unable to open file for writing: " + file_name;
-        LOG_ERROR << msg;
-        throw std::runtime_error(msg);
-    }
-    LogInfo() << "Video writer opened file with uid = " << uid_;
-    last_frame_time_ = std::chrono::steady_clock::now();
-    preview_frames_.reserve(kInitialBufferSize);
-}
-
 bool VideoWriter::IsVideoFile(const std::filesystem::path& file) {
     return file.extension() == kVideoFileExtension;
 }
@@ -58,15 +34,18 @@ std::string VideoWriter::GenerateVideoFileName(const std::string& uid) {
     return kVideoFilePrefix + uid + kVideoFileExtension;
 }
 
-void VideoWriter::Write(const cv::Mat& frame) {
-    if (use_scale_) {
-        cv::Mat resized_frame;
-        cv::resize(frame, resized_frame, cv::Size(0, 0), scale_width_, scale_height_, scale_algorithm_);
-        writer_.write(resized_frame);
-    } else {
-        writer_.write(frame);
-    }
+VideoWriter::VideoWriter(const Settings& settings)
+    : preview_sampling_interval_(settings.preview_sampling_interval_ms) {
+    last_frame_time_ = std::chrono::steady_clock::now();
+    preview_frames_.reserve(kInitialBufferSize);
+}
 
+std::string VideoWriter::GetUid() const {
+    return uid_;
+}
+
+void VideoWriter::AddFrame(const cv::Mat& frame) {
+    
     if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_interval_) {
         last_frame_time_ = cur_time;
         preview_frames_.push_back(frame);
@@ -107,8 +86,4 @@ cv::Mat VideoWriter::GetPreviewImage() const {
     cv::Mat resized_res;
     cv::resize(result, resized_res, cv::Size(0, 0), scale, scale, cv::INTER_AREA);
     return resized_res;
-}
-
-std::string VideoWriter::GetUid() const {
-    return uid_;
 }

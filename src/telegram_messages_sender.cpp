@@ -168,7 +168,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     const auto video_file_path = storage_path_ / VideoWriter::GenerateVideoFileName(uid);
 
     if (!std::filesystem::exists(video_file_path)) {
-        LOG_ERROR << "Video file is missing: " << file_path;
+        LOG_ERROR << "Video file is missing: " << LOG_VAR(uid);
         return;
     }
 
