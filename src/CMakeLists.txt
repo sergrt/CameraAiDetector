@@ -51,11 +51,13 @@ set(SOURCE
     codeproject_ai_facade.cpp
     core.cpp
     error_reporter.cpp
+    ffmpeg_video_writer.cpp
     frame_reader.cpp
     hybrid_object_detect.cpp
     log.cpp
     main.cpp
     opencv_ai_facade.cpp
+    opencv_video_writer.cpp
     settings.cpp
     simple_motion_detect.cpp
     telegram_bot_facade.cpp
@@ -68,12 +70,14 @@ set(HEADER
     codeproject_ai_facade.h
     core.h
     error_reporter.h
+    ffmpeg_video_writer.h
     final_action.h
     frame_reader.h
     helpers.h
     hybrid_object_detect.h
     log.h
     opencv_ai_facade.h
+    opencv_video_writer.h
     ring_buffer.h
     safe_ptr.h
     settings.h
@@ -84,7 +88,8 @@ set(HEADER
     telegram_messages_sender.h
     translation.h
     uid_utils.h
-    video_writer.h)
+    video_writer.h
+    video_writer_factory.h)
 
 set(OTHER_FILES
     settings.json)

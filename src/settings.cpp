@@ -88,6 +88,10 @@ Settings LoadSettings(const std::string& settings_file_name) {
         settings.frame_color = {color_json.at("R"), color_json.at("G"), color_json.at("B")};
     }
     settings.frame_width_px = json.value("frame_width_px", settings.frame_width_px);
+    settings.use_ffmpeg_writer = json.value("use_ffmpeg_writer", settings.use_ffmpeg_writer);
+    if (json.contains("ffmpeg_path")) {
+        settings.ffmpeg_path = json.value("ffmpeg_path", settings.ffmpeg_path);
+    }
     settings.use_video_scale = json.value("use_video_scale", settings.use_video_scale);
     settings.video_width = json.value("video_width", settings.video_width);
     settings.video_height = json.value("video_height", settings.video_height );

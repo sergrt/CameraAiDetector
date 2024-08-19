@@ -4,6 +4,7 @@
 #include "log.h"
 #include "translation.h"
 #include "uid_utils.h"
+#include "video_writer_factory.h"
 
 constexpr auto kBufferOverflowDelay = std::chrono::seconds(1);
 constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);
@@ -46,7 +47,8 @@ void Core::InitVideoWriter() {
         in_properties.fps,
         settings_.use_video_scale ? settings_.video_height : in_properties.height,
         settings_.use_video_scale ? settings_.video_width : in_properties.width};
-    video_writer_ = std::make_unique<VideoWriter>(settings_, in_properties, out_properties);
+    video_writer_ = VideoWriterFactory(settings_, in_properties, out_properties);
+    video_writer_->Start();
 }
 
 void Core::PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& detections) {
@@ -128,7 +130,7 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
         if (!check_frame) {
             if (video_writer_) {
                 LogTrace() << "Detect not called, just write";
-                video_writer_->Write(frame);
+                video_writer_->AddFrame(frame);
             }
         }
 
@@ -152,7 +154,7 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
                 if (!video_writer_)
                     InitVideoWriter();
 
-                video_writer_->Write(frame);
+                video_writer_->AddFrame(frame);
                 const auto video_uid = video_writer_->GetUid();
                 if (video_uid != last_alarm_video_uid_ || IsAlarmImageDelayPassed()) {
                     auto& alarm_frame = settings_.use_image_scale ? scaled_frame : frame;
@@ -162,7 +164,7 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
                 }
             } else {  // Not detected
                 if (video_writer_) {
-                    video_writer_->Write(frame);
+                    video_writer_->AddFrame(frame);
 
                     if (!first_cooldown_frame_timestamp_) {
                         LogInfo() << "Start cooldown writing";

@@ -76,6 +76,13 @@ OpenCV DNN, CodeProject AI or Simple motion detection can be used to analyze vid
     - Hybrid object detection is quite easy on resources and provides more precise results than simple motion detection
 - Compiling OpenCV with CUDA support is _really_ slow
 
+## Video writer notes
+By default application uses OpenCV video writer. It's good enough, but does not record audio. It is possible to switch to `ffmpeg` video writer. It requires ffmpeg executable, and some configuration options:
+- `use_ffmpeg_writer` - set `true` to use `ffmpeg`
+- `ffmpeg_path` - point to where `ffmpeg` is located, e. g. `/usr/bin`
+
+Video writer options, like `use_video_scale`, `video_width`, `video_height`, `video_codec`, `video_container` work for both writers.
+
 ## Configuration
 Configuration is stored in `settings.json` file, and options are (mostly) self-explanatory. Some notes:
 - `cooldown_write_time_ms` - time (in milliseconds) to write after object disappears

@@ -60,6 +60,8 @@ struct Settings {
     std::string img_format{"jpg"};  // Any cv and mime compatible type
     Color frame_color{200.0, 0.0, 0.0};  // Color of the frame around object
     int frame_width_px{1};  // Width of frame line
+    bool use_ffmpeg_writer{false};  // Use ffmpeg writer
+    std::string ffmpeg_path{};  // Path to ffmpeg, without trailing slash
     bool use_video_scale{true};  // Scale saved videos
     int video_width{1024};  // Scaled video width
     int video_height{576};  // Scaled video height
