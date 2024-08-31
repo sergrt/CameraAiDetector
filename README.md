@@ -105,6 +105,7 @@ To use **multiple cameras** there's quick and dirty solution: command-line key `
 AI itself is quite heavy on resources when used on systems without dedicated CUDA capable GPU. The easiest and quite effective way to reduce CPU load is to use `Hybrid` detection mode (`"detection_engine": "HybridOpenCV"` or `HybridCodeprojectAI`). It works like this:
 1. Detect motion by analyzing simple region changes (like "detection_engine": "Simple")
 2. If motion has been detected - call AI backend of choise
+
 This approach reduces AI calls significantly, so CPU load decreases dramatically.
 
 ## Compilation
