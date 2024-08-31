@@ -32,7 +32,7 @@ The application is written using C++, so it can be compiled on any supported pla
 - `/previews` - get list of recorded videos with previews
 - `/video_<id>` - get video with `<id>`
 - `/ping` - check app is up and running - report current time and free disk space
-- `/log` - get log tail, useful to check what's going on
+- `/log` - get log tail, useful to check what's going on (for admin users)
 - `/pause` - pause notifications for certain period of time
 - `/resume` - resume notifications
 
@@ -100,6 +100,12 @@ To free up some resources on video encoding there's `decrease_detect_rate_while_
 NB: to tweak performance, try to use different frame scaling, and different image formats. These settings affect AI system and alarm notifications, but do not affect saved videos.
 
 To use **multiple cameras** there's quick and dirty solution: command-line key `-c` (or `--config`) allows to set `settings.json` file by it's parameter. So it's possible to run several instances with different `source` variables.
+
+## Performance notes
+AI itself is quite heavy on resources when used on systems without dedicated CUDA capable GPU. The easiest and quite effective way to reduce CPU load is to use `Hybrid` detection mode (`"detection_engine": "HybridOpenCV"` or `HybridCodeprojectAI`). It works like this:
+1. Detect motion by analyzing simple region changes (like "detection_engine": "Simple")
+2. If motion has been detected - call AI backend of choise
+This approach reduces AI calls significantly, so CPU load decreases dramatically.
 
 ## Compilation
 ### Requirements:
