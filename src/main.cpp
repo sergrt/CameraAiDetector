@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
     auto _ = FinalAction([] {
         if (kAppLogStream != &std::cout) {
-            LogTrace() << "Delete file stream";
+            LOG_TRACE << "Delete file stream";
             delete kAppLogStream;
         }
     });

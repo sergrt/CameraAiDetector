@@ -46,28 +46,20 @@ LogLevel StringToLogLevel(const std::string& str) {
     return it->second;
 }
 
-Log::Log(LogLevel level)
-    : stream_(*kAppLogStream)
-    , log_level_(level) {
-    
-    if (CheckLevel()) {
-        something_written_ = true;
 
-        WriteTimestamp();
-        WriteLevel();
-    }
+Log::Log()
+    : stream_(*kAppLogStream) {
+
+    WriteTimestamp();
+    WriteLevel();
 }
 
 Log::~Log() {
-    if (something_written_) {
+    if (!stream_.BufferEmpty()) {
         stream_ << "\n";
         stream_.flush();
         AppLogTail->push(stream_.str());
     }
-}
-
-bool Log::CheckLevel() const {
-    return log_level_ >= kAppLogLevel;
 }
 
 void Log::WriteTimestamp() {
@@ -77,7 +69,7 @@ void Log::WriteTimestamp() {
 }
 
 void Log::WriteLevel() {
-    stream_ << LogLevelToString(log_level_) << " ";
+    stream_ << LogLevelToString(kAppLogLevel) << " ";
 }
 
 
@@ -115,5 +107,5 @@ void InstrumentCall::End() {
 }
 
 void InstrumentCall::PrintInfo() const {
-    LogDebug() << "[INSTR] " << name_ << ": avg time for " << counter_ << " runs = " << total_ms_.count() / counter_ << " ms";
+    LOG_DEBUG << "[INSTR] " << name_ << ": avg time for " << counter_ << " runs = " << total_ms_.count() / counter_ << " ms";
 }

@@ -37,7 +37,7 @@ void FfmpegVideoWriter::Start() {
         + " -vcodec " + kVideoCodec + " "
         + file_name_;
 
-    LOG_INFO << "Start ffmpeg, " << LOG_VAR(command_line);
+    LOG_INFO_EX << "Start ffmpeg, " << LOG_VAR(command_line);
 
     auto res = CreateProcessA(LPCSTR((ffmpeg_path_ + "\\ffmpeg.exe").c_str()),     // lpApplicationName
                               LPSTR(command_line.c_str()),               // lpCommandLine
@@ -53,7 +53,7 @@ void FfmpegVideoWriter::Start() {
 
     if (!res) {
         DWORD errorCode = GetLastError();
-        LOG_ERROR << "Cant start ffmpeg process, " << LOG_VAR(errorCode);
+        LOG_ERROR_EX << "Cant start ffmpeg process, " << LOG_VAR(errorCode);
     }
 
     CloseHandle(pi.hProcess);
@@ -63,9 +63,9 @@ void FfmpegVideoWriter::Start() {
 }
 
 void FfmpegVideoWriter::Stop() {
-    LOG_INFO << "Shutting down ffmpeg";
+    LOG_INFO_EX << "Shutting down ffmpeg";
     if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ffmpeg_pid_)) {
-        LOG_ERROR << "Unable to generate console event for ffmpeg";
+        LOG_ERROR_EX << "Unable to generate console event for ffmpeg";
     }
 }
 
@@ -74,9 +74,9 @@ void FfmpegVideoWriter::Stop() {
 void FfmpegVideoWriter::Start() {
     pid_t child_pid = fork();
     if (child_pid < 0) {
-        LOG_ERROR << "Fork failed";
+        LOG_ERROR_EX << "Fork failed";
     } else if (child_pid == 0) {
-        LOG_INFO << "Start ffmpeg";
+        LOG_INFO_EX << "Start ffmpeg";
 
         if (use_scale_) {
             execl((ffmpeg_path_ + "/ffmpeg").c_str(),
@@ -98,12 +98,12 @@ void FfmpegVideoWriter::Start() {
         }
     } else {
         ffmpeg_pid_ = child_pid;
-        LOG_INFO << "Started ffmpeg, " << LOG_VAR(ffmpeg_pid_);
+        LOG_INFO_EX << "Started ffmpeg, " << LOG_VAR(ffmpeg_pid_);
     }
 }
 
 void FfmpegVideoWriter::Stop() {
-    LOG_INFO << "Killing process " << ffmpeg_pid_;
+    LOG_INFO_EX << "Killing process " << ffmpeg_pid_;
     kill(ffmpeg_pid_, SIGTERM);
 }
 

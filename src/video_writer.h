@@ -15,7 +15,7 @@ public:
 
     virtual void Start() {}
     virtual void Stop() {}
-    virtual void AddFrame(const cv::Mat& frame);
+    virtual void AddFrame(cv::Mat frame);
 
     virtual std::string GetUid() const;
     virtual cv::Mat GetPreviewImage() const;

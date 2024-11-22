@@ -96,7 +96,7 @@ MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_pa
     , admin_start_menu_{MakeAdminStartMenu()} {
     if (!bot_) {
         static const auto err_msg = "Invalid tg bot dependency";
-        LOG_ERROR << err_msg;
+        LOG_ERROR_EX << err_msg;
         throw std::runtime_error(err_msg);
     }
 }
@@ -105,7 +105,7 @@ void MessagesSender::operator()(const telegram::messages::TextMessage& message) 
     for (const auto& user : message.recipients) {
         try {
             if (!bot_->getApi().sendMessage(user, message.text, nullptr, nullptr, nullptr, "HTML"))
-                LOG_ERROR << "Message send failed to user " << user;
+                LOG_ERROR_EX << "Message send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending message", e);
         }
@@ -116,7 +116,7 @@ void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message
     const auto& file_path = message.file_path;
 
     if (!std::filesystem::exists(file_path)) {
-        LOG_ERROR << "On-demand photo file is missing: " << file_path;
+        LOG_ERROR_EX << "On-demand photo file is missing: " << file_path;
         return;
     }
 
@@ -126,7 +126,7 @@ void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message
     for (const auto& user : message.recipients) {
         try {
             if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                LOG_ERROR << "On-demand photo send failed to user " << user;
+                LOG_ERROR_EX << "On-demand photo send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending photo", e);
         }
@@ -137,7 +137,7 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
     const auto& file_path = message.file_path;
 
     if (!std::filesystem::exists(file_path)) {
-        LOG_ERROR << "Alarm photo file is missing: " << file_path;
+        LOG_ERROR_EX << "Alarm photo file is missing: " << file_path;
         return;
     }
 
@@ -148,7 +148,7 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
     for (const auto& user : message.recipients) {
         try {
             if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
-                LOG_ERROR << "Alarm photo send failed to user " << user;
+                LOG_ERROR_EX << "Alarm photo send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending photo", e);
         }
@@ -159,7 +159,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     const auto& file_path = message.file_path;
 
     if (!std::filesystem::exists(file_path)) {
-        LOG_ERROR << "Preview file is missing: " << file_path;
+        LOG_ERROR_EX << "Preview file is missing: " << file_path;
         return;
     }
 
@@ -168,7 +168,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     const auto video_file_path = storage_path_ / VideoWriter::GenerateVideoFileName(uid);
 
     if (!std::filesystem::exists(video_file_path)) {
-        LOG_ERROR << "Video file is missing: " << LOG_VAR(uid);
+        LOG_ERROR_EX << "Video file is missing: " << LOG_VAR(uid);
         return;
     }
 
@@ -185,7 +185,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     for (const auto& user_id : message.recipients) {
         try {
             if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
-                LOG_ERROR << "Video preview send failed to user " << user_id;
+                LOG_ERROR_EX << "Video preview send failed to user " << user_id;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending photo", e);
         }
@@ -196,7 +196,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
     const auto& file_path = message.file_path;
 
     if (!std::filesystem::exists(file_path)) {
-        LOG_ERROR << "Video file is missing: " << file_path;
+        LOG_ERROR_EX << "Video file is missing: " << file_path;
         return;
     }
 
@@ -206,7 +206,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
     for (const auto& user_id : message.recipients) {
         try {
             if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
-                LOG_ERROR << "Video file " << file_path << " send failed to user " << user_id;
+                LOG_ERROR_EX << "Video file " << file_path << " send failed to user " << user_id;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending video", e);
         }
@@ -216,7 +216,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
 void MessagesSender::operator()(const telegram::messages::Menu& message) {
     try {
         if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, nullptr, nullptr, start_menu_, "HTML"))
-            LOG_ERROR << "/start reply send failed to user " << message.recipient;
+            LOG_ERROR_EX << "/start reply send failed to user " << message.recipient;
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while sending menu", e);
     }
@@ -225,7 +225,7 @@ void MessagesSender::operator()(const telegram::messages::Menu& message) {
 void MessagesSender::operator()(const telegram::messages::AdminMenu& message) {
     try {
         if (!bot_->getApi().sendMessage(message.recipient, translation::menu::kCaption, nullptr, nullptr, admin_start_menu_, "HTML"))
-            LOG_ERROR << "/start reply send failed to user " << message.recipient;
+            LOG_ERROR_EX << "/start reply send failed to user " << message.recipient;
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while sending admin menu", e);
     }
@@ -234,7 +234,7 @@ void MessagesSender::operator()(const telegram::messages::AdminMenu& message) {
 void MessagesSender::operator()(const telegram::messages::Answer& message) {
     try {
         if (!bot_->getApi().answerCallbackQuery(message.callback_id))
-            LOG_ERROR << "Answer callback query send failed";
+            LOG_ERROR_EX << "Answer callback query send failed";
     } catch (std::exception& e) {
         // Timed-out queries trigger this exception, so this exception might be non-fatal, but still logged
         LOG_EXCEPTION("Exception (non-fatal?) while sending answer callback query", e);

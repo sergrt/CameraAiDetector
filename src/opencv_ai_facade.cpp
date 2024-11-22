@@ -139,8 +139,9 @@ std::vector<Detection> OpenCvAiFacade::DetectImpl(const cv::Mat &input_image) {
     std::vector<int> class_ids;
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
-    
+
     // Parallel version
+    /*
     std::vector<int> indexes;
     indexes.reserve(kDetectionsArraySize);
     for (int i = 0; i < kDetectionsArraySize; ++i) {
@@ -175,8 +176,7 @@ std::vector<Detection> OpenCvAiFacade::DetectImpl(const cv::Mat &input_image) {
             }
         }
     });
-
-    /*
+    */
     // Sequential version
     float* output_blobs_data = reinterpret_cast<float*>(output_blobs[0].data);
     for (int i = 0; i < kDetectionsArraySize; ++i) {
@@ -205,9 +205,7 @@ std::vector<Detection> OpenCvAiFacade::DetectImpl(const cv::Mat &input_image) {
         }
         output_blobs_data += kDetections1DSize;
     }
-    */
-    
-    
+
     std::vector<int> nms_results;
     cv::dnn::NMSBoxes(boxes, confidences, kScoreThreshold, kNmsThreshold, nms_results);
     std::mutex result_lock;
@@ -234,12 +232,12 @@ bool OpenCvAiFacade::Detect(const cv::Mat &image, std::vector<Detection>& detect
     instrument_detect_impl_.End();
 
     // Debug detections
-    if (kAppLogLevel == LogLevel::kTrace && !detections.empty()) {
+    if (kAppLogLevel <= LogLevel::kTrace && !detections.empty()) {
         std::string log_str = "Detections:\n";
         for (const auto& detection : detections) {
             log_str += "\n{ \"" + detection.class_name + "\", " + std::to_string(detection.confidence) + ", [...] }\n";
         }
-        LogTrace() << log_str;
+        LOG_TRACE << log_str;
     }
     //
 

@@ -5,6 +5,14 @@
 #include <limits>
 #include <vector>
 
+namespace {
+
+cv::Mat gray{};
+cv::Mat frame_delta{};
+cv::Mat thresh{};
+
+} // namepspace
+
 SimpleMotionDetect::SimpleMotionDetect(const Settings::MotionDetectSettings& settings)
     : gaussian_sz_(cv::Size(settings.gaussian_blur_sz, settings.gaussian_blur_sz))
     , threshold_(settings.threshold)
@@ -17,7 +25,7 @@ SimpleMotionDetect::SimpleMotionDetect(const Settings::MotionDetectSettings& set
 bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& detections) {
     detections.clear();
     // auto _ = instrument_detect_impl_.Trigger();
-    cv::Mat gray;
+
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
     cv::GaussianBlur(gray, gray, gaussian_sz_, 0);
 
@@ -26,9 +34,9 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
         return true;
     }
 
-    cv::Mat frame_delta;
+
     cv::absdiff(prev_frame_, gray, frame_delta);
-    cv::Mat thresh;
+
     cv::threshold(frame_delta, thresh, threshold_, 255, cv::THRESH_BINARY);
     cv::dilate(thresh, thresh, cv::Mat(), cv::Point(-1, -1), 2);
 
@@ -75,6 +83,6 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
             1.0f,
             rect);
     }
-    prev_frame_ = gray;
+    prev_frame_ = std::move(gray);
     return true;
 }

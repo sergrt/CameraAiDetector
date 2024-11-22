@@ -36,12 +36,12 @@ void Core::PostOnDemandPhoto(const cv::Mat& frame) {
     const auto file_name = GenerateFileName("on_demand_") + ".jpg";
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
-        LOG_ERROR << "Error write on-demand photo, " << LOG_VAR(path);
+        LOG_ERROR_EX << "Error write on-demand photo, " << LOG_VAR(path);
     bot_.PostOnDemandPhoto(path);
 }
 
 void Core::InitVideoWriter() {
-    LogInfo() << "Init video writer";
+    LOG_INFO << "Init video writer";
     const auto in_properties = frame_reader_.GetStreamProperties();
     const auto out_properties = StreamProperties{
         in_properties.fps,
@@ -66,7 +66,7 @@ void Core::PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& de
     const auto file_name = GenerateFileName("alarm_") + ".jpg";
     const auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), frame))
-        LOG_ERROR << "Error write alarm photo, " << LOG_VAR(path);
+        LOG_ERROR_EX << "Error write alarm photo, " << LOG_VAR(path);
     bot_.PostAlarmPhoto(path, classes_detected);
 } 
 
@@ -82,7 +82,7 @@ std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) 
     const std::vector<int> img_encode_param{cv::IMWRITE_JPEG_QUALITY, 90};
     auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), video_writer_->GetPreviewImage(), img_encode_param))
-        LOG_ERROR << "Error write video preview image, " << LOG_VAR(path);
+        LOG_ERROR_EX << "Error write video preview image, " << LOG_VAR(path);
     return path;
 }
 
@@ -101,14 +101,16 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
         static_cast<int>(frame_reader_.GetStreamProperties().height * settings_.img_scale_y));
     const auto img_format = "." + settings_.img_format;
 
-    while (!stop_token.stop_requested()) {
+    cv::Mat frame{};
+    cv::Mat scaled_frame{};
+    while (!stop_token.stop_requested()) [[unlikely]] {
         std::unique_lock lock(buffer_mutex_);
         buffer_cv_.wait(lock, [&] { return !buffer_.empty() || stop_token.stop_requested(); });
 
         if (stop_token.stop_requested())
             break;
 
-        const cv::Mat frame = std::move(buffer_.front());
+        frame = std::move(buffer_.front());
         buffer_.pop_front();
         //cv::Mat frame = buffer_.front();
         lock.unlock();
@@ -129,25 +131,25 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
 
         if (!check_frame) {
             if (video_writer_) {
-                LogTrace() << "Detect not called, just write";
+                LOG_TRACE << "Detect not called, just write";
                 video_writer_->AddFrame(frame);
             }
         }
 
         if (check_frame) {
             last_checked_frame_ = std::chrono::steady_clock::now();
-            cv::Mat scaled_frame;
+
             if (settings_.use_image_scale)
                 cv::resize(frame, scaled_frame, scaled_size, cv::INTER_AREA);  // TODO: Check performance
 
             std::vector<Detection> detections;
             const auto detect_result = ai_->Detect(settings_.use_image_scale ? scaled_frame : frame, detections);
-            LogTrace() << "Detect result: " << detect_result;
+            LOG_TRACE << "Detect result: " << detect_result;
             ai_error_.Update(detect_result ? ErrorReporter::ErrorState::kNoError : ErrorReporter::ErrorState::kError);
 
             if (detect_result && !detections.empty()) {
                 if (first_cooldown_frame_timestamp_) {  // We are writing cooldown sequence, and detected something - stop cooldown
-                    LogInfo() << "Cooldown stopped - object detected";
+                    LOG_INFO << "Cooldown stopped - object detected";
                     first_cooldown_frame_timestamp_.reset();
                 }
 
@@ -164,16 +166,16 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
                 }
             } else {  // Not detected
                 if (video_writer_) {
-                    video_writer_->AddFrame(frame);
+                    video_writer_->AddFrame(std::move(frame));
 
                     if (!first_cooldown_frame_timestamp_) {
-                        LogInfo() << "Start cooldown writing";
+                        LOG_INFO << "Start cooldown writing";
                         first_cooldown_frame_timestamp_ = std::chrono::steady_clock::now();
                     } else {
-                        LogTrace() << "Cooldown frame saved";
+                        LOG_TRACE << "Cooldown frame saved";
                         if (IsCooldownFinished()) {
                             const auto uid = video_writer_->GetUid();
-                            LogInfo() << "Finish writing file with uid = " << uid;
+                            LOG_INFO << "Finish writing file with uid = " << uid;
                             if (const auto preview_file_path = SaveVideoPreview(uid); settings_.send_video_previews)
                                 PostVideoPreview(preview_file_path);
                             if (settings_.send_video)
@@ -198,19 +200,19 @@ bool Core::IsAlarmImageDelayPassed() const {
 }
 
 void Core::CaptureThreadFunc(std::stop_token stop_token) {
-    while (!stop_token.stop_requested()) {
-        cv::Mat frame;
-        if (!frame_reader_.GetFrame(frame)) {
+    cv::Mat frame{};
+    while (!stop_token.stop_requested()) [[unlikely]] {
+        if (!frame_reader_.GetFrame(frame)) [[unlikely]] {
             ++get_frame_error_count_;
-            LOG_ERROR << "Can't get frame";
+            LOG_ERROR_EX << "Can't get frame";
             frame_reader_error_.Update(ErrorReporter::ErrorState::kError);
 
             if (get_frame_error_count_ >= settings_.errors_before_reconnect) {
-                LogInfo() << "Reconnect";
+                LOG_INFO << "Reconnect";
                 get_frame_error_count_ = 0;
                 frame_reader_.Reconnect();
             } else {
-                LogInfo() << "Delay after error, error count = " << get_frame_error_count_;
+                LOG_INFO << "Delay after error, error count = " << get_frame_error_count_;
                 std::this_thread::sleep_for(std::chrono::milliseconds(settings_.delay_after_error_ms));
             }
         } else {
@@ -225,18 +227,20 @@ void Core::CaptureThreadFunc(std::stop_token stop_token) {
             buffer_cv_.notify_all();
 
             // Useful performance debug output
-            static auto debug_buffer_out_time = std::chrono::steady_clock::now();
-            if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(30)) {
-                LogDebug() << "Current buffer size = " << buffer_size;
-                debug_buffer_out_time = now;
+            if (kAppLogLevel <= LogLevel::kDebug) {
+                static auto debug_buffer_out_time = std::chrono::steady_clock::now();
+                if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(30)) {
+                    LOG_DEBUG << "Current buffer size = " << buffer_size;
+                    debug_buffer_out_time = now;
+                }
             }
 
             if (buffer_size > settings_.max_buffer_size) {
                 if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDelay) {
-                    LogWarning() << "Buffer size exceeds max (" << settings_.max_buffer_size << "), delay capture";
+                    LOG_WARNING << "Buffer size exceeds max (" << settings_.max_buffer_size << "), delay capture";
                     std::this_thread::sleep_for(kBufferOverflowDelay);
                 } else if (settings_.buffer_overflow_strategy == BufferOverflowStrategy::kDropHalf) {
-                    LogWarning() << "Buffer size exceeds max (" << settings_.max_buffer_size << "), dropping half of cache";
+                    LOG_WARNING << "Buffer size exceeds max (" << settings_.max_buffer_size << "), dropping half of cache";
                     std::lock_guard lock(buffer_mutex_);
                     const size_t half = buffer_.size() / 2;
                     buffer_.erase(begin(buffer_), begin(buffer_) + static_cast<decltype(buffer_)::difference_type>(half));
@@ -248,7 +252,7 @@ void Core::CaptureThreadFunc(std::stop_token stop_token) {
 
 void Core::Start() {
     if (capture_thread_.joinable() || processing_thread_.joinable()) {
-        LogInfo() << "Attempt start() on already running core";
+        LOG_INFO << "Attempt start() on already running core";
         return;
     }
 
@@ -261,8 +265,8 @@ void Core::Stop() {
     const auto processing_stop_requested = processing_thread_.request_stop();
 
     if (!capture_stop_requested || !processing_stop_requested) {
-        LogInfo() << "Attempt stop() on already stopped core. Capture stop request result = " << capture_stop_requested
-                  << ", processing stop request result = " << processing_stop_requested;
+        LOG_INFO << "Attempt stop() on already stopped core. Capture stop request result = " << capture_stop_requested
+                 << ", processing stop request result = " << processing_stop_requested;
     }
 
     buffer_cv_.notify_all();

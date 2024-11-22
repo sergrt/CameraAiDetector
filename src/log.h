@@ -30,7 +30,7 @@ public:
     StreamWrapper& operator<<(const T& data) {
         *stream_ << data;
         // Flush for immediate results. Useful for debugging
-        string_ += boost::lexical_cast<std::string>(data);
+        buffer_ += boost::lexical_cast<std::string>(data);
         return *this;
     }
 
@@ -39,17 +39,21 @@ public:
     }
 
     std::string str() const {
-        return string_;
+        return buffer_;
+    }
+
+    bool BufferEmpty() const {
+        return buffer_.empty();
     }
 
 private:
     std::ostream* stream_{};
-    std::string string_;
+    std::string buffer_;
 };
 
 class Log final {
 public:
-    explicit Log(LogLevel level);
+    explicit Log();
     ~Log();
 
     Log(const Log&) = delete;
@@ -59,71 +63,47 @@ public:
 
     template<typename T>
     Log& operator<<(const T& data) {
-        if (CheckLevel())
-            stream_ << data;
-
+        stream_ << data;
         return *this;
     }
 
     Log& operator<<(const bool data) {
-        if (CheckLevel())
-            stream_ << (data ? "true" : "false");
-
+        stream_ << (data ? "true" : "false");
         return *this;
     }
 
     template <typename T>
     Log& operator<<(const std::vector<T>& data) {
-        if (CheckLevel()) {
-            stream_ << "[ ";
-            for (const auto& v : data)
-                stream_ << v << " ";
-            stream_ << "]";
-        }
+        stream_ << "[ ";
+        for (const auto& v : data)
+            stream_ << v << " ";
+        stream_ << "]";
 
         return *this;
     }
 
 private:
-    bool CheckLevel() const;
     void WriteTimestamp();
     void WriteLevel();
 
     StreamWrapper stream_;
-    const LogLevel log_level_{};
-    bool something_written_ = false;
 };
 
-// Shortcuts, for readability
-inline Log LogTrace() {
-    return Log(kTrace);
-}
-
-inline Log LogDebug() {
-    return Log(kDebug);
-}
-
-inline Log LogInfo() {
-    return Log(kInfo);
-}
-
-inline Log LogWarning() {
-    return Log(kWarning);
-}
-
-inline Log LogError() {
-    return Log(kError);
-}
+#define LOG_TRACE if (kAppLogLevel <= kTrace) Log()
+#define LOG_DEBUG if (kAppLogLevel <= kDebug) Log()
+#define LOG_INFO if (kAppLogLevel <= kInfo) Log()
+#define LOG_WARNING if (kAppLogLevel <= kWarning) Log()
+#define LOG_ERROR if (kAppLogLevel <= kError) Log()
 
 #define LOG_FILE_LINE __FILE__ << ":" << __LINE__ << ": "
 
-#define LOG_TRACE LogTrace() << LOG_FILE_LINE
-#define LOG_DEBUG LogDebug() << LOG_FILE_LINE
-#define LOG_INFO LogInfo() << LOG_FILE_LINE
-#define LOG_WARNING LogWarning() << LOG_FILE_LINE
-#define LOG_ERROR LogError() << LOG_FILE_LINE
+#define LOG_TRACE_EX LOG_TRACE << LOG_FILE_LINE
+#define LOG_DEBUG_EX LOG_DEBUG << LOG_FILE_LINE
+#define LOG_INFO_EX LOG_INFO << LOG_FILE_LINE
+#define LOG_WARNING_EX LOG_WARNING << LOG_FILE_LINE
+#define LOG_ERROR_EX LOG_ERROR << LOG_FILE_LINE
 
-#define LOG_EXCEPTION(description, exception) LogError() << "Exception at " << LOG_FILE_LINE << description << ": " << exception.what()
+#define LOG_EXCEPTION(description, exception) LOG_ERROR << "Exception at " << LOG_FILE_LINE << description << ": " << exception.what()
 
 struct InstrumentCall {
     InstrumentCall(std::string name, uint64_t log_counter);

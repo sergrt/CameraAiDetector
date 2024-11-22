@@ -10,7 +10,7 @@ class OpenCvVideoWriter : public VideoWriter {
 public:
     OpenCvVideoWriter(const Settings& settings, const StreamProperties& in_properties, const StreamProperties& out_properties);
 
-    void AddFrame(const cv::Mat& frame) override;
+    void AddFrame(cv::Mat frame) override;
 
 private:
     cv::VideoWriter writer_;

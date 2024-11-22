@@ -15,7 +15,7 @@ size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* userp) {
 
 std::vector<Detection> ParseResponse(const nlohmann::json& response) {
     if (!response.value("success", false) || !response.contains("predictions")) {
-        LOG_ERROR << "CodeProject AI backend error. Response: " << response.dump();
+        LOG_ERROR_EX << "CodeProject AI backend error. Response: " << response.dump();
         return {};
     }
 
@@ -50,7 +50,7 @@ CodeprojectAiFacade::CodeprojectAiFacade(std::string url, float min_confidence, 
     curl_ = curl_ptr(curl_easy_init(), curl_deleter);
 
     if (!curl_) {
-        LOG_ERROR << "curl init failed";
+        LOG_ERROR_EX << "curl init failed";
         throw std::runtime_error("curl init failed");
     }
 }
@@ -67,7 +67,7 @@ std::vector<unsigned char> CodeprojectAiFacade::PrepareImage(const cv::Mat& imag
     static const std::vector<int> img_encode_param;
 
     if (!cv::imencode(img_format_, image, img_buffer, img_encode_param)) {
-        LOG_ERROR << "Frame encoding failed";
+        LOG_ERROR_EX << "Frame encoding failed";
         return {};
     }
 
@@ -100,10 +100,10 @@ bool CodeprojectAiFacade::Detect(const cv::Mat& image, std::vector<Detection>& d
 
     const auto curl_res = curl_easy_perform(curl_.get());
     if (curl_res == CURLE_OK) {
-        LogTrace() << "detect() ok, result: " << read_buffer;
+        LOG_TRACE << "detect() ok, result: " << read_buffer;
         detections = ParseResponse(nlohmann::json::parse(read_buffer));
     } else {
-        LOG_ERROR << "curl_easy_perform() failed: " << curl_easy_strerror(curl_res);
+        LOG_ERROR_EX << "curl_easy_perform() failed: " << curl_easy_strerror(curl_res);
         return false;
     }
 

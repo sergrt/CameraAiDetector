@@ -44,30 +44,29 @@ std::string VideoWriter::GetUid() const {
     return uid_;
 }
 
-void VideoWriter::AddFrame(const cv::Mat& frame) {
-    
+void VideoWriter::AddFrame(cv::Mat frame) {
     if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_interval_) {
         last_frame_time_ = cur_time;
-        preview_frames_.push_back(frame);
+        preview_frames_.push_back(std::move(frame));
         // TODO: check size to prevent mem issues
     }
 }
 
 cv::Mat VideoWriter::GetPreviewImage() const {
     if (preview_frames_.empty()) {
-        LOG_WARNING << "Preview frames buffer is empty";
+        LOG_WARNING_EX << "Preview frames buffer is empty";
         return CreateEmptyPreview();
     }
 
     const double step = static_cast<double>(preview_frames_.size()) / kPreviewImages;
-    LogInfo() << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
+    LOG_INFO << "Preview frames count = " << preview_frames_.size() << ", step = " << step;
 
     std::vector<cv::Mat> rows;
     const auto images_in_row = static_cast<int>(std::sqrt(kPreviewImages));
     for (size_t i = 0 ; i < kPreviewImages; ++i) {
         const auto idx = static_cast<size_t>(step * i);
         if (i % images_in_row == 0) {
-            LogDebug() << "Add row, i = " << i;
+            LOG_DEBUG << "Add row, i = " << i;
             rows.push_back(preview_frames_[idx]);
         }
 

@@ -115,7 +115,7 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
 
 void BotFacade::SetupBotCommands() {
     bot_->getEvents().onCommand(telegram::commands::kStart, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kStart << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kStart << " from user " << message->chat->id;
         const auto id = message->chat->id;
         if (IsUserAdmin(id)) {
             PostAdminMenu(id);
@@ -124,39 +124,39 @@ void BotFacade::SetupBotCommands() {
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kImage, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kImage << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kImage << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessOnDemandCmd(id);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kPing, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kPing << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kPing << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessStatusCmd(id);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kVideos, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kVideos << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kVideos << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessVideosCmd(id, filter);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kPreviews, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kPreviews << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kPreviews << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             const auto filter = GetFilter(message->text);
             ProcessPreviewsCmd(id, filter);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kLog, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kLog << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kLog << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAdmin(id)) {
             ProcessLogCmd(id);
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kPause, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             auto pause_time = GetParameterTimeMin(message->text);
             if (!pause_time)
@@ -165,26 +165,26 @@ void BotFacade::SetupBotCommands() {
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kResume, [this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
+        LOG_INFO << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             ProcessResumeCmd(id);
         }
     });
     bot_->getEvents().onAnyMessage([this](TgBot::Message::Ptr message) {
-        LogInfo() << "Received message " << message->text << " from user " << message->chat->id;
+        LOG_INFO << "Received message " << message->text << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             if (StringTools::startsWith(message->text, telegram::commands::VideoCmdPrefix())) {
-                LogInfo() << "video command received: " << message->text;
+                LOG_INFO << "video command received: " << message->text;
                 const std::string uid = message->text.substr(telegram::commands::VideoCmdPrefix().size());  // uid of file
                 ProcessVideoCmd(id, uid);
             }
         } else {
-            LogWarning() << "Unauthorized user tried to access: " << id;
+            LOG_WARNING << "Unauthorized user tried to access: " << id;
         }
     });
     bot_->getEvents().onCallbackQuery([this](TgBot::CallbackQuery::Ptr query) {
-        LogInfo() << "Received callback query " << query->message->text << " from user " << query->message->chat->id
-                  << " @ " << GetDateTime(query->message);
+        LOG_INFO << "Received callback query " << query->message->text << " from user " << query->message->chat->id
+                 << " @ " << GetDateTime(query->message);
         if (const auto id = query->message->chat->id; IsUserAllowed(id)) {
             const auto command = query->data.substr(1);  // Remove slash
             if (StringTools::startsWith(query->data, telegram::commands::VideoCmdPrefix())) {
@@ -294,13 +294,13 @@ void BotFacade::ProcessPreviewsCmd(uint64_t user_id, const std::optional<Filter>
 
 void BotFacade::ProcessVideoCmd(uint64_t user_id, const std::string& video_uid) {
     if (!IsUidValid(video_uid)) {
-        LogWarning() << "User " << user_id << " asked file with invalid uid: " << video_uid;
+        LOG_WARNING << "User " << user_id << " asked file with invalid uid: " << video_uid;
         PostTextMessage(translation::messages::kInvalidFileRequested, user_id);
         return;
     }
 
     const std::filesystem::path file_path = storage_path_ / VideoWriter::GenerateVideoFileName(video_uid);
-    LogInfo() << "File uid: " << video_uid << ", full path: " << file_path;
+    LOG_INFO << "File uid: " << video_uid << ", full path: " << file_path;
 
     if (std::filesystem::exists(file_path)) {
         PostVideo(file_path, user_id);
@@ -341,7 +341,7 @@ void BotFacade::ProcessResumeCmd(uint64_t user_id) {
 bool BotFacade::IsUserAllowed(uint64_t user_id) const {
     const auto it = std::find(cbegin(allowed_users_), cend(allowed_users_), user_id);
     if (it == cend(allowed_users_)) {
-        LogWarning() << "Unauthorized user access: " << user_id;
+        LOG_WARNING << "Unauthorized user access: " << user_id;
         return false;
     }
     return true;
@@ -350,7 +350,7 @@ bool BotFacade::IsUserAllowed(uint64_t user_id) const {
 bool BotFacade::IsUserAdmin(uint64_t user_id) const {
     const auto it = std::find(cbegin(admin_users_), cend(admin_users_), user_id);
     if (it == cend(admin_users_)) {
-        LogWarning() << "Unauthorized admin user access: " << user_id;
+        LOG_WARNING << "Unauthorized admin user access: " << user_id;
         return false;
     }
     return true;
@@ -495,7 +495,7 @@ std::set<uint64_t> BotFacade::UpdateGetUnpausedRecipients(const std::set<uint64_
 void BotFacade::PollThreadFunc(std::stop_token stop_token) {
     try {
         if (!bot_->getApi().deleteWebhook())
-            LOG_ERROR << "Unable to delete bot Webhook";
+            LOG_ERROR_EX << "Unable to delete bot Webhook";
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while prepare bot polling", e);
     }
@@ -504,7 +504,7 @@ void BotFacade::PollThreadFunc(std::stop_token stop_token) {
 
     while (!stop_token.stop_requested()) {
         try {
-            LogTrace() << "LongPoll start";
+            LOG_TRACE << "LongPoll start";
             long_poll.start();
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while start polling", e);
@@ -529,7 +529,7 @@ void BotFacade::QueueThreadFunc(std::stop_token stop_token) {
 
 void BotFacade::Start() {
     if (poll_thread_.joinable() || queue_thread_.joinable()) {
-        LogInfo() << "Attempt start() on already running bot";
+        LOG_INFO << "Attempt start() on already running bot";
         return;
     }
 
@@ -542,8 +542,8 @@ void BotFacade::Stop() {
     const auto queue_stop_requested = queue_thread_.request_stop();
 
     if (!poll_stop_requested || !queue_stop_requested) {
-        LogInfo() << "Attempt stop() on already stopped bot. Poll stop request result = " << poll_stop_requested
-                  << ", queue stop request result = " << queue_stop_requested;
+        LOG_INFO << "Attempt stop() on already stopped bot. Poll stop request result = " << poll_stop_requested
+                 << ", queue stop request result = " << queue_stop_requested;
     }
 
     queue_cv_.notify_all();
