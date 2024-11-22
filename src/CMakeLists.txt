@@ -111,6 +111,6 @@ IF (WIN32)
 ELSE()
     # Sometimes it helps to add extra optimizations:
     target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:-Wall;-Wextra;-Wpedantic;-g>")
-    target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:-Wall;-Wextra;-Wpedantic;-Ofast>")
+    target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:-Wall;-Wextra;-Wpedantic;-Ofast;-march=native;-ffast-math>")
     target_link_libraries(${PROJECT_NAME} TgBot CURL::libcurl OpenSSL::Crypto OpenSSL::SSL ${OpenCV_LIBS} boost_program_options tbb)
 ENDIF()
