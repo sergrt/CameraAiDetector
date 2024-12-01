@@ -53,7 +53,7 @@ bool SimpleMotionDetect::Detect(const cv::Mat& image, std::vector<Detection>& de
         }
     }
 
-    for (size_t i = 0, sz = contours.size(); i < sz; i++) {
+    for (size_t i = 0, sz = contours.size(); i < sz; ++i) {
         if (cv::contourArea(contours[i]) < area_trigger_)
             continue;
 

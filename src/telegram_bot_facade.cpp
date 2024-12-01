@@ -90,7 +90,7 @@ std::set<VideoFileInfo> CollectVideoFileUids(const std::filesystem::path& storag
         if (VideoWriter::IsVideoFile(entry.path())) {
             const auto file_name = entry.path().filename().generic_string();
             if (!filter || ApplyFilter(*filter, file_name)) {
-                files.insert({GetUidFromFileName(file_name), GetFileSizeMb(entry)});
+                files.emplace(GetUidFromFileName(file_name), GetFileSizeMb(entry));
             }
         }
     }
@@ -159,9 +159,7 @@ void BotFacade::SetupBotCommands() {
         LOG_INFO << "Received command " << telegram::commands::kPause << " from user " << message->chat->id;
         if (const auto id = message->chat->id; IsUserAllowed(id)) {
             auto pause_time = GetParameterTimeMin(message->text);
-            if (!pause_time)
-                *pause_time = kDefaultPauseTime;
-            ProcessPauseCmd(id, *pause_time);
+            ProcessPauseCmd(id, pause_time.value_or(kDefaultPauseTime));
         }
     });
     bot_->getEvents().onCommand(telegram::commands::kResume, [this](TgBot::Message::Ptr message) {
@@ -208,9 +206,7 @@ void BotFacade::SetupBotCommands() {
             } else if (StringTools::startsWith(command, telegram::commands::kPause)) {
                 //TODO: Pause and Resume commands use the same code as bot commands, consider to refactor
                 auto pause_min = GetParameterTimeMin(command.substr(telegram::commands::kPause.size()));
-                if (!pause_min)
-                    *pause_min = kDefaultPauseTime;
-                 ProcessPauseCmd(id, *pause_min);
+                 ProcessPauseCmd(id, pause_min.value_or(kDefaultPauseTime));
                  PostAnswerCallback(query->id);
             } else if (StringTools::startsWith(command, telegram::commands::kResume)) {
                 ProcessResumeCmd(id);

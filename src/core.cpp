@@ -176,7 +176,8 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
                         if (IsCooldownFinished()) {
                             const auto uid = video_writer_->GetUid();
                             LOG_INFO << "Finish writing file with uid = " << uid;
-                            if (const auto preview_file_path = SaveVideoPreview(uid); settings_.send_video_previews)
+                            const auto preview_file_path = SaveVideoPreview(uid);
+                            if (settings_.send_video_previews)
                                 PostVideoPreview(preview_file_path);
                             if (settings_.send_video)
                                 PostVideo(uid);

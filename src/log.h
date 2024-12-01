@@ -103,7 +103,7 @@ private:
 #define LOG_WARNING_EX LOG_WARNING << LOG_FILE_LINE
 #define LOG_ERROR_EX LOG_ERROR << LOG_FILE_LINE
 
-#define LOG_EXCEPTION(description, exception) LOG_ERROR << "Exception at " << LOG_FILE_LINE << description << ": " << exception.what()
+#define LOG_EXCEPTION(description, exception) LOG_ERROR << "Exception at " << LOG_FILE_LINE << (description) << ": " << exception.what()
 
 struct InstrumentCall {
     InstrumentCall(std::string name, uint64_t log_counter);

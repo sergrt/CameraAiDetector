@@ -9,7 +9,7 @@
 #include <memory>
 #include <stdexcept>
 
-inline std::unique_ptr<Ai> AiFactory(const DetectionEngine& detection_engine, const Settings& settings) {
+inline std::unique_ptr<Ai> AiFactory(DetectionEngine detection_engine, const Settings& settings) {
     if (detection_engine == DetectionEngine::kCodeprojectAi) {
         return std::make_unique<CodeprojectAiFacade>(settings.codeproject_ai_url, settings.min_confidence, settings.img_format);
     } else if (detection_engine == DetectionEngine::kOpenCv) {
