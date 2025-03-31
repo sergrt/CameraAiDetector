@@ -231,7 +231,7 @@ void Core::CaptureThreadFunc(std::stop_token stop_token) {
             if (kAppLogLevel <= LogLevel::kDebug) {
                 static auto debug_buffer_out_time = std::chrono::steady_clock::now();
                 if (const auto now = std::chrono::steady_clock::now(); now - debug_buffer_out_time >= std::chrono::seconds(30)) {
-                    LOG_DEBUG << "Current buffer size = " << buffer_size;
+                    LOG_TRACE << "Current buffer size = " << buffer_size;
                     debug_buffer_out_time = now;
                 }
             }
