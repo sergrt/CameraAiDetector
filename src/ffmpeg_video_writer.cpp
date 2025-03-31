@@ -5,6 +5,7 @@
 
 #ifndef _WINDOWS
 #include <signal.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -105,6 +106,17 @@ void FfmpegVideoWriter::Start() {
 void FfmpegVideoWriter::Stop() {
     LOG_INFO_EX << "Killing process " << ffmpeg_pid_;
     kill(ffmpeg_pid_, SIGTERM);
+    int status = 0;
+    waitpid(ffmpeg_pid_, &status, 0);
+    if (WIFEXITED(status)) {
+        LOG_DEBUG << "Exit status = exited";
+    } else if (WIFSIGNALED(status)) {
+        LOG_DEBUG << "Exit status = signaled";
+    } else if (WIFSTOPPED(status)) {
+        LOG_DEBUG << "Exit status = stopped";
+    } else {
+        LOG_DEBUG << "Exit status = unknown";
+    }
 }
 
 #endif
