@@ -68,16 +68,16 @@ cv::Mat VideoWriter::GetPreviewImage() const {
         if (i % images_in_row == 0) {
             LOG_DEBUG << "Add row, i = " << i;
             rows.push_back(preview_frames_[idx]);
+        } else {
+            auto& row = rows.back();
+            cv::hconcat(row, preview_frames_[idx], row);
         }
-
-        auto& row = rows.back();
-        cv::hconcat(row, preview_frames_[idx], row);
     }
 
-    cv::Mat result = rows[0];
+    cv::Mat& result = rows[0];
     for (size_t i = 1; i < rows.size(); ++i) {
         if (rows[i].cols == result.cols)
-            result.push_back(rows[i]);
+            result.push_back(std::move(rows[i]));
         // cv::vconcat(result, rows[i], result);
     }
 
