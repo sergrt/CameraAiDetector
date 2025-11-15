@@ -187,7 +187,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
             if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
                 LOG_ERROR_EX << "Video preview send failed to user " << user_id;
         } catch (std::exception& e) {
-            LOG_EXCEPTION("Exception while sending photo", e);
+            LOG_EXCEPTION("Exception while sending preview", e);
         }
     }
 }
