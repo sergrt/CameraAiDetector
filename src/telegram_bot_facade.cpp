@@ -104,11 +104,25 @@ std::chrono::system_clock::time_point GetDateTime(TgBot::Message::Ptr message) {
 }  // namespace
 
 BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_path, std::set<uint64_t> allowed_users, std::set<uint64_t> admin_users)
-    : bot_{std::make_unique<TgBot::Bot>(token)}
+    : bot_{std::make_unique<TgBot::Bot>(
+        token
+#ifdef HAVE_CURL
+      , http_client_
+#endif
+    )}
     , message_sender_{bot_.get(), storage_path}
     , storage_path_{std::move(storage_path)}
     , allowed_users_{std::move(allowed_users)}
     , admin_users_{std::move(admin_users)} {
+
+#ifdef HAVE_CURL
+        for (const auto& h : http_client_.curlHandles) {
+            // To use proxy server:
+            //curl_easy_setopt(h.second, CURLOPT_PROXY, "ip:port");
+            //curl_easy_setopt(h.second, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+            //curl_easy_setopt(h.second, CURLOPT_PROXYUSERPWD, "username:password");
+        }
+#endif
 
     SetupBotCommands();
 }

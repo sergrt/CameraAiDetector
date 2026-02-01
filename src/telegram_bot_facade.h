@@ -71,6 +71,9 @@ private:
     void RemoveUserFromPaused(uint64_t user_id);
     std::set<uint64_t> UpdateGetUnpausedRecipients(const std::set<uint64_t>& users, std::optional<uint64_t> requester = std::nullopt);
 
+#ifdef HAVE_CURL
+    TgBot::CurlHttpClient http_client_;
+#endif
     std::unique_ptr<TgBot::Bot> bot_;
     MessagesSender message_sender_;
     std::filesystem::path storage_path_;

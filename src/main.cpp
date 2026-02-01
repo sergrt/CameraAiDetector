@@ -70,20 +70,30 @@ int main(int argc, char* argv[]) {
 
     std::string command;
     while (true) {
+        const bool is_tty = 
 #ifdef __linux__
-        if (isatty(fileno(stdin)))
+            isatty(fileno(stdin));
+#else
+            true;
+#endif
+
+#ifdef __linux__
+        if (is_tty)
             std::cin >> command;
 	else
             std::this_thread::sleep_for(std::chrono::minutes(1));
 #else
         std::cin >> command;
 #endif
+        if (!is_tty)
+            continue;
+
         if (command == "q" || std::cin.fail() || std::cin.eof()) {
             std::cout << "Exiting..." << std::endl;
             core.Stop();
             break;
         } else {
-            std::cout << "Invalid command. Enter \"q\" to quit" << std::endl;
+            std::cout << "Invalid command \"" << command << "\". Enter \"q\" to quit" << std::endl;
         }
     }
 }

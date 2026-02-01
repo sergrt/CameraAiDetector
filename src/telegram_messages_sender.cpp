@@ -85,6 +85,13 @@ TgBot::InlineKeyboardMarkup::Ptr MakeAdminStartMenu() {
     return keyboard;
 }
 
+std::string updateCaption(const std::string& caption, int retryNumber) {
+    if (retryNumber > 0) {
+        return caption + " (retry " + std::to_string(retryNumber) + ")";
+    }
+    return caption;
+}
+
 }  // namespace
 
 namespace telegram {
@@ -93,7 +100,8 @@ MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_pa
     : bot_{bot}
     , storage_path_{std::move(storage_path)}
     , start_menu_{MakeStartMenu()}
-    , admin_start_menu_{MakeAdminStartMenu()} {
+    , admin_start_menu_{MakeAdminStartMenu()}
+    , resend_thread_{&MessagesSender::ResendFn, this} {
     if (!bot_) {
         static const auto err_msg = "Invalid tg bot dependency";
         LOG_ERROR_EX << err_msg;
@@ -101,20 +109,77 @@ MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_pa
     }
 }
 
+MessagesSender::~MessagesSender() {
+    const auto resend_stop_requested = resend_thread_.request_stop();
+    if (!resend_stop_requested)
+        LOG_ERROR << "Resend thread stop request failed";
+
+    if (resend_thread_.joinable())
+        resend_thread_.join();
+}
+
+void MessagesSender::ResendFn(std::stop_token stop_token) {
+    while (!stop_token.stop_requested()) {
+        std::this_thread::sleep_for(std::chrono::seconds(15));
+
+        if (stop_token.stop_requested())
+            break;
+
+        std::lock_guard lock(resend_mutex_);
+        while (!resend_queue_.empty()) {
+            const auto& fn = resend_queue_.front();
+            bool send_result = false;
+            try {
+                LOG_DEBUG << "Resending message from resend queue";
+                send_result = fn();
+                if (send_result) {
+                    LOG_DEBUG << "Resend succeeded";
+                }
+            } catch (std::exception& e) {
+                LOG_EXCEPTION("Exception while sending message from resend queue", e);
+            }
+
+            if (!send_result) {
+                LOG_DEBUG << "Resend failed";
+                break;
+            }
+            resend_queue_.pop_front();
+        }
+    }
+}
+
 void MessagesSender::operator()(const telegram::messages::TextMessage& message) {
+    std::vector<std::function<bool()>> resend_pack;
     for (const auto& user : message.recipients) {
+        auto fn = [bot = bot_, user, text = message.text, retryNo = 0]() mutable -> bool {
+            const auto textWithInfo = updateCaption(text, retryNo);
+            ++retryNo;
+            return bot->getApi().sendMessage(user, textWithInfo, nullptr, nullptr, nullptr, "HTML") != nullptr;
+        };
+
+        bool send_result = false;
         try {
-            if (!bot_->getApi().sendMessage(user, message.text, nullptr, nullptr, nullptr, "HTML"))
+            send_result = fn();
+            if (!send_result)
                 LOG_ERROR_EX << "Message send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending message", e);
         }
+
+        if (!send_result) {
+            resend_pack.push_back(std::move(fn));
+        }
+    }
+
+    if (!resend_pack.empty()) {
+        std::lock_guard lock(resend_mutex_);
+        resend_queue_.insert(resend_queue_.end(), std::make_move_iterator(std::begin(resend_pack)), std::make_move_iterator(std::end(resend_pack)));
     }
 }
 
 void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message) {
     const auto& file_path = message.file_path;
-
+    LOG_DEBUG << "Sending on-demand photo to " << LOG_VAR(message.recipients.size()) << " users: " << file_path;
     if (!std::filesystem::exists(file_path)) {
         LOG_ERROR_EX << "On-demand photo file is missing: " << file_path;
         return;
@@ -123,13 +188,32 @@ void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message
     const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
     const auto caption = "&#128064; " + GetHumanDateTime(file_path.filename().generic_string());  // &#128064; - eyes
 
+    std::vector<std::function<bool()>> resend_pack;
     for (const auto& user : message.recipients) {
+        auto fn = [bot = bot_, user, photo, caption = caption, retryNo = 0]() mutable -> bool {
+            const auto captionWithInfo = updateCaption(caption, retryNo);
+            ++retryNo;
+            return bot->getApi().sendPhoto(user, photo, captionWithInfo, 0, nullptr, "HTML") != nullptr;
+        };
+
+        bool send_result = false;
         try {
-            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
+            send_result = fn();
+            if (!send_result)
                 LOG_ERROR_EX << "On-demand photo send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending photo", e);
         }
+
+        if (!send_result) {
+            LOG_DEBUG << "Add to resend queue";
+            resend_pack.push_back(std::move(fn));
+        }
+    }
+
+    if (!resend_pack.empty()) {
+        std::lock_guard lock(resend_mutex_);
+        resend_queue_.insert(resend_queue_.end(), std::make_move_iterator(std::begin(resend_pack)), std::make_move_iterator(std::end(resend_pack)));
     }
 }
 
@@ -145,13 +229,31 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
     const auto caption = "&#10071; " + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
                          + (message.detections.empty() ? "" : " (" + message.detections + ")");
 
+    std::vector<std::function<bool()>> resend_pack;
     for (const auto& user : message.recipients) {
+        auto fn = [bot = bot_, user, photo, caption = caption, retryNo = 0]() mutable -> bool {
+            const auto captionWithInfo = updateCaption(caption, retryNo);
+            ++retryNo;
+            return bot->getApi().sendPhoto(user, photo, captionWithInfo, 0, nullptr, "HTML") != nullptr;
+        };
+
+        bool send_result = false;
         try {
-            if (!bot_->getApi().sendPhoto(user, photo, caption, 0, nullptr, "HTML"))
+            send_result = fn();
+            if (!send_result)
                 LOG_ERROR_EX << "Alarm photo send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending photo", e);
         }
+
+        if (!send_result) {
+            resend_pack.push_back(std::move(fn));
+        }
+    }
+
+    if (!resend_pack.empty()) {
+        std::lock_guard lock(resend_mutex_);
+        resend_queue_.insert(resend_queue_.end(), std::make_move_iterator(std::begin(resend_pack)), std::make_move_iterator(std::end(resend_pack)));
     }
 }
 
@@ -182,13 +284,31 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     view_button->callbackData = cmd;
     keyboard->inlineKeyboard.push_back({view_button});
 
-    for (const auto& user_id : message.recipients) {
+    std::vector<std::function<bool()>> resend_pack;
+    for (const auto& user : message.recipients) {
+        auto fn = [bot = bot_, user, photo, keyboard, retryNo = 0]() mutable -> bool {
+            const auto captionWithInfo = updateCaption("", retryNo);
+            ++retryNo;
+            return bot->getApi().sendPhoto(user, photo, captionWithInfo, 0, keyboard, "", true) != nullptr;  // NOTE: No notification here
+        };
+
+        bool send_result = false;
         try {
-            if (!bot_->getApi().sendPhoto(user_id, photo, "", 0, keyboard, "", true))  // NOTE: No notification here
-                LOG_ERROR_EX << "Video preview send failed to user " << user_id;
+            send_result = fn();
+            if (!send_result)
+                LOG_ERROR_EX << "Video preview send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending preview", e);
         }
+
+        if (!send_result) {
+            resend_pack.push_back(std::move(fn));
+        }
+    }
+
+    if (!resend_pack.empty()) {
+        std::lock_guard lock(resend_mutex_);
+        resend_queue_.insert(resend_queue_.end(), std::make_move_iterator(std::begin(resend_pack)), std::make_move_iterator(std::end(resend_pack)));
     }
 }
 
@@ -203,13 +323,31 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
     const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
     const auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
 
-    for (const auto& user_id : message.recipients) {
+    std::vector<std::function<bool()>> resend_pack;
+    for (const auto& user : message.recipients) {
+        auto fn = [bot = bot_, user, video, caption = caption, retryNo = 0]() mutable -> bool {
+            const auto captionWithInfo = updateCaption(caption, retryNo);
+            ++retryNo;
+            return bot->getApi().sendVideo(user, video, false, 0, 0, 0, "", captionWithInfo, 0, nullptr, "HTML") != nullptr;
+        };
+
+        bool send_result = false;
         try {
-            if (!bot_->getApi().sendVideo(user_id, video, false, 0, 0, 0, "", caption, 0, nullptr, "HTML"))
-                LOG_ERROR_EX << "Video file " << file_path << " send failed to user " << user_id;
+            send_result = fn();
+            if (!send_result)
+                LOG_ERROR_EX << "Video file " << file_path << " send failed to user " << user;
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while sending video", e);
         }
+
+        if (!send_result) {
+            resend_pack.push_back(std::move(fn));
+        }
+    }
+
+    if (!resend_pack.empty()) {
+        std::lock_guard lock(resend_mutex_);
+        resend_queue_.insert(resend_queue_.end(), std::make_move_iterator(std::begin(resend_pack)), std::make_move_iterator(std::end(resend_pack)));
     }
 }
 
