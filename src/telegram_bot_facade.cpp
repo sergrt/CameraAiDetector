@@ -116,7 +116,8 @@ BotFacade::BotFacade(const std::string& token, std::filesystem::path storage_pat
     , admin_users_{std::move(admin_users)} {
 
 #ifdef HAVE_CURL
-        for (const auto& h : http_client_.curlHandles) {
+        auto& httpClient = static_cast<const TgBot::CurlHttpClient&>(bot_->getApi()._httpClient);
+        for (const auto& h : httpClient.curlHandles) {
             // To use proxy server:
             //curl_easy_setopt(h.second, CURLOPT_PROXY, "ip:port");
             //curl_easy_setopt(h.second, CURLOPT_PROXYAUTH, CURLAUTH_ANY);

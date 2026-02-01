@@ -4,6 +4,7 @@
 #include "log.h"
 #include "translation.h"
 #include "uid_utils.h"
+#include "video_utils.h"
 #include "video_writer.h"
 
 #include <filesystem>
@@ -320,28 +321,38 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
         return;
     }
 
-    const auto video = TgBot::InputFile::fromFile(file_path.generic_string(), "video/mp4");
-    const auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
-
+    auto splitted_files = GetSplittedFileNames(file_path);
+    const size_t total_parts = splitted_files.size();
+    size_t part_number = 0;
     std::vector<std::function<bool()>> resend_pack;
-    for (const auto& user : message.recipients) {
-        auto fn = [bot = bot_, user, video, caption = caption, retryNo = 0]() mutable -> bool {
-            const auto captionWithInfo = updateCaption(caption, retryNo);
-            ++retryNo;
-            return bot->getApi().sendVideo(user, video, false, 0, 0, 0, "", captionWithInfo, 0, nullptr, "HTML") != nullptr;
-        };
 
-        bool send_result = false;
-        try {
-            send_result = fn();
-            if (!send_result)
-                LOG_ERROR_EX << "Video file " << file_path << " send failed to user " << user;
-        } catch (std::exception& e) {
-            LOG_EXCEPTION("Exception while sending video", e);
-        }
+    for (const auto& part_file_path : splitted_files) {
+        ++part_number;
+        for (const auto& user : message.recipients) {
+            const auto video = TgBot::InputFile::fromFile(part_file_path.generic_string(), "video/mp4");
+            auto caption = "&#127910; " + GetHumanDateTime(file_path.filename().generic_string());  // &#127910; - video camera
+            if (total_parts > 1) {
+                caption += " (" + std::to_string(part_number) + "/" + std::to_string(total_parts) + ")";
+            }
 
-        if (!send_result) {
-            resend_pack.push_back(std::move(fn));
+            auto fn = [bot = bot_, user, video, caption = caption, retryNo = 0]() mutable -> bool {
+                const auto captionWithInfo = updateCaption(caption, retryNo);
+                ++retryNo;
+                return bot->getApi().sendVideo(user, video, false, 0, 0, 0, "", captionWithInfo, 0, nullptr, "HTML") != nullptr;
+            };
+
+            bool send_result = false;
+            try {
+                send_result = fn();
+                if (!send_result)
+                    LOG_ERROR_EX << "Video file " << file_path << " send failed to user " << user;
+            } catch (std::exception& e) {
+                LOG_EXCEPTION("Exception while sending video", e);
+            }
+
+            if (!send_result) {
+                resend_pack.push_back(std::move(fn));
+            }
         }
     }
 
@@ -371,7 +382,7 @@ void MessagesSender::operator()(const telegram::messages::AdminMenu& message) {
 
 void MessagesSender::operator()(const telegram::messages::Answer& message) {
     try {
-        if (!bot_->getApi().answerCallbackQuery(message.callback_id))
+        if (!bot_->getApi().answerCallbackQuery(message.callback_id, "", false, "", 20))
             LOG_ERROR_EX << "Answer callback query send failed";
     } catch (std::exception& e) {
         // Timed-out queries trigger this exception, so this exception might be non-fatal, but still logged
