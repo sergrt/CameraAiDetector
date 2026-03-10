@@ -120,6 +120,8 @@ MessagesSender::~MessagesSender() {
 }
 
 void MessagesSender::ResendFn(std::stop_token stop_token) {
+    static const int MaxQueueNotificationCounter = 8;
+    int queueNotificationCounter = MaxQueueNotificationCounter;
     while (!stop_token.stop_requested()) {
         std::this_thread::sleep_for(std::chrono::seconds(15));
 
@@ -145,6 +147,12 @@ void MessagesSender::ResendFn(std::stop_token stop_token) {
                 break;
             }
             resend_queue_.pop_front();
+        }
+
+        --queueNotificationCounter;
+        if (queueNotificationCounter == 0) {
+            LOG_DEBUG << "Resend queue size: " << resend_queue_.size();
+            queueNotificationCounter = MaxQueueNotificationCounter;
         }
     }
 }
