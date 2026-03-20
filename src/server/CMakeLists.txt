@@ -47,11 +47,22 @@ ELSE()
     link_directories(${TGBOT_ROOT_DIR}/build)
 ENDIF()
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
+message(${CMAKE_CURRENT_SOURCE_DIR}/..)
+
 set(SOURCE
     main.cpp
+    mqtt_client.cpp
+    ../common/log.cpp
 )
 
 set(HEADER
+    mqtt_client.h
+    ../common/final_action.h
+    ../common/helpers.h
+    ../common/log.h
+    ../common/ring_buffer.h
+    ../common/safe_ptr.h
 )
 
 set(OTHER_FILES

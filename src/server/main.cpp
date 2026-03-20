@@ -1,50 +1,50 @@
-#include <mqtt/async_client.h>
+#include "mqtt_client.h"
+
+#include "common/log.h"
+#include "common/ring_buffer.h"
+#include "common/safe_ptr.h"
+
+#include <atomic>
+#include <csignal>
 #include <iostream>
 
-const std::string SERVER_ADDRESS = "tcp://localhost:1883";
-const std::string CLIENT_ID = "telegram_sender";
-const std::string TOPIC = "camera/images";
+LogLevel kAppLogLevel{LogLevel::kDebug};
+std::ostream* kAppLogStream{nullptr};
+constexpr size_t kLogTailLines{32};
+SafePtr<RingBuffer<std::string>> AppLogTail{kLogTailLines};
 
-class callback : public virtual mqtt::callback
-{
-public:
-    void message_arrived(mqtt::const_message_ptr msg) override
-    {
-        std::cout << "Received image: "
-                  << msg->get_payload().size()
-                  << " bytes" << std::endl;
+std::atomic_bool keep_running{true};
 
-        // Here you would send to Telegram
-        // send_to_telegram(msg->get_payload());
-    }
-};
-
-std::mutex mtx;
-std::condition_variable cv;
-bool running = true;
+void SignalHandler(int signum) {
+    std::cout << "Caught signal " << signum << std::endl;
+    keep_running.store(false);
+    keep_running.notify_all();
+}
 
 int main()
 {
-    mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
-    callback cb;
+    //kAppLogLevel = static_cast<LogLevel>(settings.log_level);
+    //if (settings.log_filename.empty()) {
+        kAppLogStream = &std::cout;
+    //} else {
+    //    kAppLogStream = new std::ofstream(settings.log_filename);
+    //}
 
-    client.set_callback(cb);
+    auto _ = FinalAction([] {
+        if (kAppLogStream != &std::cout) {
+            LOG_TRACE << "Delete file stream";
+            delete kAppLogStream;
+        }
+    });
 
-    mqtt::connect_options conn;
-    conn.set_clean_session(false);
-    conn.set_keep_alive_interval(60);
-    conn.set_automatic_reconnect(true);
-    
-    //conn.set_ssl(mqtt::ssl_options{})
+    std::ios_base::sync_with_stdio(false);
 
-    client.connect(conn)->wait(); // wait for
-    auto token = client.subscribe(TOPIC, 1);
-    token->wait(); // wait for
+    std::signal(SIGINT, SignalHandler);
+    std::cout << "Application start, press CTRL+C to quit" << std::endl;
 
-    std::cout << "Waiting for messages...\n";
+    MqttClient client;
+    client.Start();
 
-    std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, []{ return !running; });
-
-    client.disconnect()->wait();
+    keep_running.wait(true);
+    std::cout << "Exiting..." << std::endl;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "telegram_bot_facade.h"
+#include "mqtt_client.h"
 
 #include <string>
 
@@ -11,12 +11,12 @@ public:
         kNoError = 1,
     };
 
-    ErrorReporter(telegram::BotFacade* telegram_bot, std::string activation_msg, std::string deactivation_msg);
+    ErrorReporter(MqttClient* mqtt_client, std::string activation_msg, std::string deactivation_msg);
 
     void Update(ErrorState error_state);
 
 private:
-    telegram::BotFacade* const bot_;
+    MqttClient* const mqtt_client_;
     std::string activation_msg_;
     std::string deactivation_msg_;
     ErrorState cur_state_{ErrorState::kNoError};

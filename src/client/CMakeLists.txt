@@ -56,6 +56,7 @@ set(SOURCE
     hybrid_object_detect.cpp
     log.cpp
     main.cpp
+    mqtt_client.cpp
     opencv_ai_facade.cpp
     opencv_video_writer.cpp
     settings.cpp
@@ -76,6 +77,7 @@ set(HEADER
     helpers.h
     hybrid_object_detect.h
     log.h
+    mqtt_client.h
     opencv_ai_facade.h
     opencv_video_writer.h
     ring_buffer.h

@@ -1,7 +1,7 @@
 #include "error_reporter.h"
 
-ErrorReporter::ErrorReporter(telegram::BotFacade* telegram_bot, std::string activation_msg, std::string deactivation_msg)
-    : bot_(telegram_bot)
+ErrorReporter::ErrorReporter(MqttClient* mqtt_client, std::string activation_msg, std::string deactivation_msg)
+    : mqtt_client_(mqtt_client)
     , activation_msg_(std::move(activation_msg))
     , deactivation_msg_(std::move(deactivation_msg))
 {}
@@ -9,6 +9,6 @@ ErrorReporter::ErrorReporter(telegram::BotFacade* telegram_bot, std::string acti
 void ErrorReporter::Update(ErrorState error_state) {
    if (cur_state_ != error_state) {
         cur_state_ = error_state;
-        bot_->PostTextMessage(error_state == ErrorState::kError ? activation_msg_ : deactivation_msg_);
+        mqtt_client_->PostTextMessage(error_state == ErrorState::kError ? activation_msg_ : deactivation_msg_);
     }
 }

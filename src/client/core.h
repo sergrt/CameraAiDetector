@@ -3,8 +3,8 @@
 #include "ai.h"
 #include "error_reporter.h"
 #include "frame_reader.h"
+#include "mqtt_client.h"
 #include "settings.h"
-#include "telegram_bot_facade.h"
 #include "video_writer.h"
 
 #include <chrono>
@@ -46,7 +46,7 @@ private:
 
     const Settings settings_;
     FrameReader frame_reader_;
-    telegram::BotFacade bot_;
+    MqttClient mqtt_client_;
     std::unique_ptr<Ai> ai_;
     std::unique_ptr<VideoWriter> video_writer_;
 

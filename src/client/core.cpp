@@ -12,23 +12,23 @@ constexpr auto kDecreasedCheckFrameInterval = std::chrono::milliseconds(1000);
 Core::Core(Settings settings)
     : settings_(std::move(settings))
     , frame_reader_(settings_.source)
-    , bot_(settings_.bot_token, settings_.storage_path, settings_.allowed_users, settings_.admin_users)
-    , ai_error_(&bot_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
-    , frame_reader_error_(&bot_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
+    , mqtt_client_()
+    , ai_error_(&mqtt_client_, translation::errors::kAiProcessingError, translation::errors::kAiProcessingRestored)
+    , frame_reader_error_(&mqtt_client_, translation::errors::kGetFrameError, translation::errors::kGetFrameRestored) {
 
     ai_ = AiFactory(settings_.detection_engine, settings_);
     VideoWriter::kVideoCodec = settings_.video_codec;
     VideoWriter::kVideoFileExtension = "." + settings_.video_container;
 
-    bot_.Start();
+    mqtt_client_.Start();
     frame_reader_.Open();
 
     if (settings_.notify_on_start)
-        bot_.PostTextMessage(translation::messages::kAppStarted);
+        mqtt_client_.PostTextMessage(translation::messages::kAppStarted);
 }
 
 Core::~Core() {
-    bot_.Stop();
+    mqtt_client_.Stop();
     Stop();
 }
 
@@ -37,7 +37,7 @@ void Core::PostOnDemandPhoto(const cv::Mat& frame) {
     const auto path = (settings_.storage_path / file_name).generic_string();
     if (!cv::imwrite(path, frame))
         LOG_ERROR_EX << "Error write on-demand photo, " << LOG_VAR(path);
-    bot_.PostOnDemandPhoto(path);
+    mqtt_client_.PostOnDemandPhoto(path);
 }
 
 void Core::InitVideoWriter() {
@@ -67,7 +67,7 @@ void Core::PostAlarmPhoto(const cv::Mat& frame, const std::vector<Detection>& de
     const auto path = settings_.storage_path / file_name;
     if (!cv::imwrite(path.generic_string(), frame))
         LOG_ERROR_EX << "Error write alarm photo, " << LOG_VAR(path);
-    bot_.PostAlarmPhoto(path, classes_detected);
+    mqtt_client_.PostAlarmPhoto(path, classes_detected);
 } 
 
 void Core::DrawBoxes(const cv::Mat& frame, const std::vector<Detection>& detections) {
@@ -87,12 +87,12 @@ std::filesystem::path Core::SaveVideoPreview(const std::string& video_file_uid) 
 }
 
 void Core::PostVideoPreview(const std::filesystem::path& file_path) {
-    bot_.PostVideoPreview(file_path);
+    mqtt_client_.PostVideoPreview(file_path);
 }
 
 void Core::PostVideo(const std::string& uid) {
     const auto file_path = settings_.storage_path / VideoWriter::GenerateVideoFileName(uid);
-    bot_.PostVideo(file_path);
+    mqtt_client_.PostVideo(file_path);
 }
 
 void Core::ProcessingThreadFunc(std::stop_token stop_token) {
@@ -115,7 +115,7 @@ void Core::ProcessingThreadFunc(std::stop_token stop_token) {
         //cv::Mat frame = buffer_.front();
         lock.unlock();
 
-        if (bot_.SomeoneIsWaitingForPhoto())
+        if (mqtt_client_.SomeoneIsWaitingForPhoto())
             PostOnDemandPhoto(frame);
 
         static uint64_t i = 0;
