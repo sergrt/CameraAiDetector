@@ -31,7 +31,12 @@ private:
     const TgBot::InlineKeyboardMarkup::Ptr start_menu_{};
     const TgBot::InlineKeyboardMarkup::Ptr admin_start_menu_{};
 
-    std::deque<std::function<bool()>> resend_queue_;
+    struct ResendEntry {
+        std::function<bool()> fn;
+        int retry_count{0};
+    };
+
+    std::deque<ResendEntry> resend_queue_;
     std::jthread resend_thread_;
     std::mutex resend_mutex_;
     void ResendFn(std::stop_token stop_token);

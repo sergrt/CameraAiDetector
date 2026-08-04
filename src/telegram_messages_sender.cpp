@@ -101,13 +101,14 @@ MessagesSender::MessagesSender(TgBot::Bot* bot, std::filesystem::path storage_pa
     : bot_{bot}
     , storage_path_{std::move(storage_path)}
     , start_menu_{MakeStartMenu()}
-    , admin_start_menu_{MakeAdminStartMenu()}
-    , resend_thread_{&MessagesSender::ResendFn, this} {
+    , admin_start_menu_{MakeAdminStartMenu()} {
     if (!bot_) {
         static const auto err_msg = "Invalid tg bot dependency";
         LOG_ERROR_EX << err_msg;
         throw std::runtime_error(err_msg);
     }
+
+    resend_thread_ = std::jthread(&MessagesSender::ResendFn, this);
 }
 
 MessagesSender::~MessagesSender() {
@@ -121,6 +122,7 @@ MessagesSender::~MessagesSender() {
 
 void MessagesSender::ResendFn(std::stop_token stop_token) {
     static const int MaxQueueNotificationCounter = 8;
+    static constexpr int kMaxResendRetries = 100;  // Bound the resend queue to prevent unbounded memory growth
     int queueNotificationCounter = MaxQueueNotificationCounter;
     while (!stop_token.stop_requested()) {
         std::this_thread::sleep_for(std::chrono::seconds(15));
@@ -130,11 +132,11 @@ void MessagesSender::ResendFn(std::stop_token stop_token) {
 
         std::lock_guard lock(resend_mutex_);
         while (!resend_queue_.empty()) {
-            const auto& fn = resend_queue_.front();
+            auto& entry = resend_queue_.front();
             bool send_result = false;
             try {
                 LOG_DEBUG << "Resending message from resend queue";
-                send_result = fn();
+                send_result = entry.fn();
                 if (send_result) {
                     LOG_DEBUG << "Resend succeeded";
                 }
@@ -143,7 +145,12 @@ void MessagesSender::ResendFn(std::stop_token stop_token) {
             }
 
             if (!send_result) {
-                LOG_DEBUG << "Resend failed";
+                ++entry.retry_count;
+                LOG_DEBUG << "Resend failed, retry count = " << entry.retry_count;
+                if (entry.retry_count >= kMaxResendRetries) {
+                    LOG_ERROR << "Giving up on message after " << kMaxResendRetries << " retries";
+                    resend_queue_.pop_front();
+                }
                 break;
             }
             resend_queue_.pop_front();
@@ -158,7 +165,7 @@ void MessagesSender::ResendFn(std::stop_token stop_token) {
 }
 
 void MessagesSender::operator()(const telegram::messages::TextMessage& message) {
-    std::vector<std::function<bool()>> resend_pack;
+    std::vector<ResendEntry> resend_pack;
     for (const auto& user : message.recipients) {
         auto fn = [bot = bot_, user, text = message.text, retryNo = 0]() mutable -> bool {
             const auto textWithInfo = updateCaption(text, retryNo);
@@ -176,7 +183,7 @@ void MessagesSender::operator()(const telegram::messages::TextMessage& message) 
         }
 
         if (!send_result) {
-            resend_pack.push_back(std::move(fn));
+            resend_pack.push_back(ResendEntry{std::move(fn), 0});
         }
     }
 
@@ -197,7 +204,7 @@ void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message
     const auto photo = TgBot::InputFile::fromFile(file_path.generic_string(), "image/jpeg");
     const auto caption = "&#128064; " + GetHumanDateTime(file_path.filename().generic_string());  // &#128064; - eyes
 
-    std::vector<std::function<bool()>> resend_pack;
+    std::vector<ResendEntry> resend_pack;
     for (const auto& user : message.recipients) {
         auto fn = [bot = bot_, user, photo, caption = caption, retryNo = 0]() mutable -> bool {
             const auto captionWithInfo = updateCaption(caption, retryNo);
@@ -216,7 +223,7 @@ void MessagesSender::operator()(const telegram::messages::OnDemandPhoto& message
 
         if (!send_result) {
             LOG_DEBUG << "Add to resend queue";
-            resend_pack.push_back(std::move(fn));
+            resend_pack.push_back(ResendEntry{std::move(fn), 0});
         }
     }
 
@@ -238,7 +245,7 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
     const auto caption = "&#10071; " + GetHumanDateTime(file_path.filename().generic_string())  // &#10071; - red exclamation mark
                          + (message.detections.empty() ? "" : " (" + message.detections + ")");
 
-    std::vector<std::function<bool()>> resend_pack;
+    std::vector<ResendEntry> resend_pack;
     for (const auto& user : message.recipients) {
         auto fn = [bot = bot_, user, photo, caption = caption, retryNo = 0]() mutable -> bool {
             const auto captionWithInfo = updateCaption(caption, retryNo);
@@ -256,7 +263,7 @@ void MessagesSender::operator()(const telegram::messages::AlarmPhoto& message) {
         }
 
         if (!send_result) {
-            resend_pack.push_back(std::move(fn));
+            resend_pack.push_back(ResendEntry{std::move(fn), 0});
         }
     }
 
@@ -293,7 +300,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
     view_button->callbackData = cmd;
     keyboard->inlineKeyboard.push_back({view_button});
 
-    std::vector<std::function<bool()>> resend_pack;
+    std::vector<ResendEntry> resend_pack;
     for (const auto& user : message.recipients) {
         auto fn = [bot = bot_, user, photo, keyboard, retryNo = 0]() mutable -> bool {
             const auto captionWithInfo = updateCaption("", retryNo);
@@ -311,7 +318,7 @@ void MessagesSender::operator()(const telegram::messages::Preview& message) {
         }
 
         if (!send_result) {
-            resend_pack.push_back(std::move(fn));
+            resend_pack.push_back(ResendEntry{std::move(fn), 0});
         }
     }
 
@@ -332,7 +339,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
     auto splitted_files = GetSplittedFileNames(file_path);
     const size_t total_parts = splitted_files.size();
     size_t part_number = 0;
-    std::vector<std::function<bool()>> resend_pack;
+    std::vector<ResendEntry> resend_pack;
 
     for (const auto& part_file_path : splitted_files) {
         ++part_number;
@@ -359,7 +366,7 @@ void MessagesSender::operator()(const telegram::messages::Video& message) {
             }
 
             if (!send_result) {
-                resend_pack.push_back(std::move(fn));
+                resend_pack.push_back(ResendEntry{std::move(fn), 0});
             }
         }
     }

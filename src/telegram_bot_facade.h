@@ -87,6 +87,7 @@ private:
 
     std::deque<Message> messages_queue_;
     std::unordered_map<uint64_t, std::chrono::zoned_time<std::chrono::system_clock::duration>> paused_users_;
+    mutable std::mutex paused_users_mutex_;
     std::jthread queue_thread_;
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;

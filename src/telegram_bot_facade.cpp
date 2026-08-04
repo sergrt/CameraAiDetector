@@ -9,6 +9,7 @@
 #include "video_writer.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <filesystem>
 #include <regex>
@@ -34,6 +35,7 @@ std::optional<std::chrono::minutes> GetParameterTimeMin(const std::string& text)
     if (std::regex_match(text, match, filter_regex)) {
         const auto period = ToUpper(match[2]);
 
+        errno = 0;
         const auto count = std::strtol(match[1].str().c_str(), nullptr, 10);
         if (count == 0 || errno == ERANGE) {
             return std::nullopt;
@@ -86,7 +88,18 @@ struct VideoFileInfo {
 
 std::set<VideoFileInfo> CollectVideoFileUids(const std::filesystem::path& storage_path, const std::optional<telegram::Filter>& filter) {
     std::set<VideoFileInfo> files;
-    for (const auto& entry : std::filesystem::directory_iterator(storage_path)) {
+    std::error_code ec;
+    if (!std::filesystem::exists(storage_path, ec)) {
+        LOG_ERROR_EX << "Storage path does not exist: " << storage_path;
+        return files;
+    }
+    if (ec) {
+        LOG_ERROR_EX << "Error checking storage path " << storage_path << ": " << ec.message();
+        return files;
+    }
+    for (const auto& entry : std::filesystem::directory_iterator(storage_path, ec)) {
+        if (ec)
+            break;
         if (VideoWriter::IsVideoFile(entry.path())) {
             const auto file_name = entry.path().filename().generic_string();
             if (!filter || ApplyFilter(*filter, file_name)) {
@@ -196,10 +209,14 @@ void BotFacade::SetupBotCommands() {
         }
     });
     bot_->getEvents().onCallbackQuery([this](TgBot::CallbackQuery::Ptr query) {
+        if (!query || !query->message) {
+            LOG_WARNING << "Received callback query with missing message";
+            return;
+        }
         LOG_INFO << "Received callback query " << query->message->text << " from user " << query->message->chat->id
                  << " @ " << GetDateTime(query->message);
         if (const auto id = query->message->chat->id; IsUserAllowed(id)) {
-            const auto command = query->data.substr(1);  // Remove slash
+            const auto command = query->data.size() > 1 ? query->data.substr(1) : std::string{};  // Remove slash
             if (StringTools::startsWith(query->data, telegram::commands::VideoCmdPrefix())) {
                 const std::string video_id = query->data.substr(telegram::commands::VideoCmdPrefix().size());
                 ProcessVideoCmd(id, video_id);
@@ -241,7 +258,10 @@ BotFacade::~BotFacade() {
 std::string BotFacade::PrepareStatusInfo(uint64_t requested_by) {
     const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
     std::string timestamp = std::format("{:%d-%m-%Y %H:%M:%S}", cur_time);
-    timestamp.erase(begin(timestamp) + timestamp.find('.'), end(timestamp));
+    auto dot_pos = timestamp.find('.');
+    if (dot_pos != std::string::npos) {
+        timestamp.erase(begin(timestamp) + static_cast<std::string::difference_type>(dot_pos), end(timestamp));
+    }
 
     std::string free_space = std::to_string(std::filesystem::space(storage_path_).available / 1'000'000);
     for (auto i = static_cast<int>(free_space.size()) - 3; i > 0; i -= 3) {
@@ -253,8 +273,11 @@ std::string BotFacade::PrepareStatusInfo(uint64_t requested_by) {
            GetUptime() + " " + translation::messages::kUptime;
 
     UpdatePausedUsers();
-    if (auto it = paused_users_.find(requested_by); it != paused_users_.end()) {
-        message += std::string{",\n"} + translation::messages::kNotificationsPaused + " " + GetDateTimeString(it->second);
+    {
+        std::lock_guard lock(paused_users_mutex_);
+        if (auto it = paused_users_.find(requested_by); it != paused_users_.end()) {
+            message += std::string{",\n"} + translation::messages::kNotificationsPaused + " " + GetDateTimeString(it->second);
+        }
     }
 
     return message;
@@ -341,7 +364,10 @@ void BotFacade::ProcessLogCmd(uint64_t user_id) {
 void BotFacade::ProcessPauseCmd(uint64_t user_id, std::chrono::minutes pause_time) {
     const auto end_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now() + pause_time};
     PostTextMessage(translation::messages::kNotificationsPaused + " " + GetDateTimeString(end_time), user_id);
-    paused_users_[user_id] = end_time;
+    {
+        std::lock_guard lock(paused_users_mutex_);
+        paused_users_[user_id] = end_time;
+    }
 }
 
 void BotFacade::ProcessResumeCmd(uint64_t user_id) {
@@ -475,12 +501,14 @@ void BotFacade::PostAnswerCallback(const std::string& callback_id) {
 
 void BotFacade::UpdatePausedUsers() {
     const auto cur_time = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()}.get_local_time();
+    std::lock_guard lock(paused_users_mutex_);
     std::erase_if(paused_users_, [&cur_time](const auto& p) {
         return p.second.get_local_time() <= cur_time;
     });
 }
 
 void BotFacade::RemoveUserFromPaused(uint64_t user_id) {
+    std::lock_guard lock(paused_users_mutex_);
     std::erase_if(paused_users_, [user_id](const auto& p) {
         return p.first == user_id;
     });
@@ -491,9 +519,12 @@ std::set<uint64_t> BotFacade::UpdateGetUnpausedRecipients(const std::set<uint64_
     UpdatePausedUsers();
 
     auto res = users;
-    for (const auto& p : paused_users_) {
-        if (auto it = res.find(p.first); it != res.end()) {
-            res.erase(it);
+    {
+        std::lock_guard lock(paused_users_mutex_);
+        for (const auto& p : paused_users_) {
+            if (auto it = res.find(p.first); it != res.end()) {
+                res.erase(it);
+            }
         }
     }
 
@@ -505,13 +536,13 @@ std::set<uint64_t> BotFacade::UpdateGetUnpausedRecipients(const std::set<uint64_
 
 void BotFacade::PollThreadFunc(std::stop_token stop_token) {
     try {
-        if (!bot_->getApi().deleteWebhook())
+        if (!bot_->getApi().deleteWebhook(true))
             LOG_ERROR_EX << "Unable to delete bot Webhook";
     } catch (std::exception& e) {
         LOG_EXCEPTION("Exception while prepare bot polling", e);
     }
 
-    TgBot::TgLongPoll long_poll(*bot_);
+    TgBot::TgLongPoll long_poll(*bot_, 10, 1);
 
     while (!stop_token.stop_requested()) {
         try {
@@ -520,6 +551,7 @@ void BotFacade::PollThreadFunc(std::stop_token stop_token) {
         } catch (std::exception& e) {
             LOG_EXCEPTION("Exception while start polling", e);
         }
+        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 }
 

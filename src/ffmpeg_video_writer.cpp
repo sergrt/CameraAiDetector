@@ -3,6 +3,9 @@
 #include "log.h"
 #include "uid_utils.h"
 
+#include <chrono>
+#include <thread>
+
 #ifndef _WINDOWS
 #include <signal.h>
 #include <sys/wait.h>
@@ -77,7 +80,8 @@ void FfmpegVideoWriter::Start() {
     if (child_pid < 0) {
         LOG_ERROR_EX << "Fork failed";
     } else if (child_pid == 0) {
-        LOG_INFO_EX << "Start ffmpeg";
+        // Child process. Only async-signal-safe functions are allowed here.
+        // Logging (iostream) is not async-signal-safe, so do not log here.
 
         if (use_scale_) {
             execl((ffmpeg_path_ + "/ffmpeg").c_str(),
@@ -97,6 +101,9 @@ void FfmpegVideoWriter::Start() {
                 file_name_.c_str(),
                 (char*)NULL);
         }
+
+        // execl only returns on failure
+        _exit(1);
     } else {
         ffmpeg_pid_ = child_pid;
         LOG_INFO_EX << "Started ffmpeg, " << LOG_VAR(ffmpeg_pid_);
@@ -106,17 +113,33 @@ void FfmpegVideoWriter::Start() {
 void FfmpegVideoWriter::Stop() {
     LOG_INFO_EX << "Killing process " << ffmpeg_pid_;
     kill(ffmpeg_pid_, SIGTERM);
+
+    // Wait for termination with a timeout so shutdown cannot hang indefinitely
+    constexpr int kTerminationTimeoutSec = 10;
     int status = 0;
-    waitpid(ffmpeg_pid_, &status, 0);
-    if (WIFEXITED(status)) {
-        LOG_DEBUG << "Exit status = exited";
-    } else if (WIFSIGNALED(status)) {
-        LOG_DEBUG << "Exit status = signaled";
-    } else if (WIFSTOPPED(status)) {
-        LOG_DEBUG << "Exit status = stopped";
-    } else {
-        LOG_DEBUG << "Exit status = unknown";
+    for (int i = 0; i < kTerminationTimeoutSec; ++i) {
+        const auto wait_res = waitpid(ffmpeg_pid_, &status, WNOHANG);
+        if (wait_res == ffmpeg_pid_) {
+            if (WIFEXITED(status)) {
+                LOG_DEBUG << "Exit status = exited";
+            } else if (WIFSIGNALED(status)) {
+                LOG_DEBUG << "Exit status = signaled";
+            } else if (WIFSTOPPED(status)) {
+                LOG_DEBUG << "Exit status = stopped";
+            } else {
+                LOG_DEBUG << "Exit status = unknown";
+            }
+            return;
+        } else if (wait_res < 0) {
+            LOG_ERROR_EX << "waitpid failed";
+            return;
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    LOG_WARNING << "ffmpeg did not terminate within " << kTerminationTimeoutSec << "s, sending SIGKILL";
+    kill(ffmpeg_pid_, SIGKILL);
+    waitpid(ffmpeg_pid_, &status, 0);
 }
 
 #endif

@@ -3,10 +3,12 @@
 #include "log.h"
 #include "uid_utils.h"
 
+#include <algorithm>
 #include <string>
 
 constexpr size_t kInitialBufferSize = 120;  // Some reasonable value to fit frames without reallocate too often
 constexpr size_t kPreviewImages = 9;  // 3x3 grid. Should be square number
+constexpr size_t kMaxPreviewFrames = 120;  // Bound the preview buffer to prevent unbounded memory growth
 const std::string VideoWriter::kVideoFilePrefix = "v_";
 
 std::string VideoWriter::kVideoCodec = "avc1";
@@ -48,7 +50,10 @@ void VideoWriter::AddFrame(cv::Mat frame) {
     if (const auto cur_time = std::chrono::steady_clock::now(); cur_time - last_frame_time_ >= preview_sampling_interval_) {
         last_frame_time_ = cur_time;
         preview_frames_.push_back(std::move(frame));
-        // TODO: check size to prevent mem issues
+        // Keep the buffer bounded to prevent unbounded memory growth on long recordings
+        if (preview_frames_.size() > kMaxPreviewFrames) {
+            preview_frames_.erase(begin(preview_frames_), begin(preview_frames_) + (preview_frames_.size() - kMaxPreviewFrames));
+        }
     }
 }
 
@@ -79,6 +84,11 @@ cv::Mat VideoWriter::GetPreviewImage() const {
         if (rows[i].cols == result.cols)
             result.push_back(std::move(rows[i]));
         // cv::vconcat(result, rows[i], result);
+    }
+
+    if (result.cols == 0) {
+        LOG_WARNING_EX << "Preview image has zero width";
+        return CreateEmptyPreview();
     }
 
     const double scale = 1920 / static_cast<float>(result.cols);  // TODO: Make preview size configurable
